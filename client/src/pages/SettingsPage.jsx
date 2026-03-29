@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { Sun, Moon, Download, Upload, Plus, Trash2, Activity, Database, Rss, Lock, Palette, Globe, Code, Check, Users } from 'lucide-react';
 import { SettingsContext } from '../App';
-import { updateSettings, exportConfig, importConfig, getServices, createService, deleteService, exportOPML, importOPML, createBackup, getAuthStatus, setupAuth, setupTOTP, verifyTOTP, disableTOTP, toggleCommunity, registerSite, getSettings as fetchSettings } from '../api';
+import { updateSettings, exportConfig, importConfig, getServices, createService, deleteService, exportOPML, importOPML, createBackup, getAuthStatus, setupAuth, setupTOTP, verifyTOTP, disableTOTP, toggleCommunity, registerSite, getSettings as fetchSettings, uploadWallpaper } from '../api';
 import { THEMES, applyTheme, getThemeGroups } from '../themes';
 import { STYLES, applyStyle, getStyleGroups } from '../styles';
 
@@ -142,12 +142,11 @@ export default function SettingsPage() {
                         input.onchange = async (e) => {
                           const file = e.target.files[0];
                           if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = () => {
-                            setWallpaperUrl(reader.result);
-                            document.documentElement.style.setProperty('--bg-wallpaper', `url(${reader.result})`);
-                          };
-                          reader.readAsDataURL(file);
+                          const result = await uploadWallpaper(file);
+                          if (result.ok) {
+                            setWallpaperUrl(result.url);
+                            document.documentElement.style.setProperty('--bg-wallpaper', `url(${result.url})`);
+                          }
                         };
                         input.click();
                       }}
