@@ -40,37 +40,76 @@ function getCpuUsage() {
 }
 
 function getDiskUsage() {
+  const HOST_PROC = process.env.HOST_PROC || '/proc';
+  const disks = [];
+
   try {
-    // Get ALL real filesystems, pick the ones that matter
-    const output = execSync("df -B1 -x tmpfs -x devtmpfs -x overlay -x squashfs -x efivarfs 2>/dev/null || df -B1 / 2>/dev/null", { encoding: 'utf8', timeout: 3000 });
-    const lines = output.trim().split('\n').slice(1); // skip header
-    const disks = [];
+    // Read host's mount info from /host/proc/mounts
+    const mounts = fs.readFileSync(`${HOST_PROC}/mounts`, 'utf8');
+    const realMounts = mounts.split('\n').filter(line => {
+      if (!line.startsWith('/dev/')) return false;
+      const parts = line.split(' ');
+      const fstype = parts[2];
+      // Skip virtual/snap/loop/docker filesystems
+      if (['squashfs', 'devtmpfs', 'tmpfs', 'overlay', 'fuse.snapfuse'].includes(fstype)) return false;
+      if (parts[0].includes('/loop')) return false;
+      return true;
+    });
 
-    for (const line of lines) {
-      const parts = line.trim().split(/\s+/);
-      if (parts.length < 6) continue;
+    for (const line of realMounts) {
+      const parts = line.split(' ');
       const device = parts[0];
-      const total = parseInt(parts[1]) || 0;
-      const used = parseInt(parts[2]) || 0;
-      const mountpoint = parts[5];
+      const mountpoint = parts[1];
+      const fstype = parts[2];
 
-      // Skip tiny/virtual filesystems
-      if (total < 1024 * 1024 * 100) continue; // skip < 100MB
-      if (device.startsWith('/dev/') || mountpoint === '/') {
-        disks.push({ device, total, used, mountpoint, percent: total > 0 ? Math.round((used / total) * 100) : 0 });
+      // Use statvfs via df on the mountpoint -- but the mountpoint is from the host's perspective
+      // We can't df host paths from inside the container, so read from /host/proc/1/mountinfo
+      try {
+        // Try nsenter to run df in the host's namespace (requires pid:host)
+        const output = execSync(`nsenter -t 1 -m -- df -B1 "${mountpoint}" 2>/dev/null | tail -1`, { encoding: 'utf8', timeout: 3000 });
+        const dfParts = output.trim().split(/\s+/);
+        if (dfParts.length >= 4) {
+          const total = parseInt(dfParts[1]) || 0;
+          const used = parseInt(dfParts[2]) || 0;
+          if (total > 100 * 1024 * 1024) { // > 100MB
+            disks.push({
+              device: device.split('/').pop(),
+              total, used, mountpoint, fstype,
+              percent: total > 0 ? Math.round((used / total) * 100) : 0
+            });
+          }
+        }
+      } catch {}
+    }
+  } catch {}
+
+  // Deduplicate by device (same device can have bind mounts)
+  const seen = new Set();
+  const uniqueDisks = disks.filter(d => {
+    if (seen.has(d.device)) return false;
+    seen.add(d.device);
+    return true;
+  });
+
+  // Fallback: if nothing found, try regular df
+  if (uniqueDisks.length === 0) {
+    try {
+      const output = execSync("df -B1 -x tmpfs -x devtmpfs -x overlay -x squashfs 2>/dev/null || df -B1 / 2>/dev/null", { encoding: 'utf8', timeout: 3000 });
+      for (const line of output.trim().split('\n').slice(1)) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 6 && parts[0].startsWith('/dev/')) {
+          const total = parseInt(parts[1]) || 0;
+          const used = parseInt(parts[2]) || 0;
+          if (total > 100 * 1024 * 1024) {
+            uniqueDisks.push({ device: parts[0].split('/').pop(), total, used, mountpoint: parts[5], percent: total > 0 ? Math.round((used / total) * 100) : 0 });
+          }
+        }
       }
-    }
-
-    // If we found disks, return the root one or the largest
-    if (disks.length > 0) {
-      const root = disks.find(d => d.mountpoint === '/') || disks.sort((a, b) => b.total - a.total)[0];
-      return { total: root.total, used: root.used, percent: root.percent, disks };
-    }
-
-    return { total: 0, used: 0, percent: 0, disks: [] };
-  } catch {
-    return { total: 0, used: 0, percent: 0, disks: [] };
+    } catch {}
   }
+
+  const root = uniqueDisks.find(d => d.mountpoint === '/') || uniqueDisks[0] || { total: 0, used: 0, percent: 0 };
+  return { total: root.total || 0, used: root.used || 0, percent: root.percent || 0, disks: uniqueDisks };
 }
 
 function getNetworkStats() {
