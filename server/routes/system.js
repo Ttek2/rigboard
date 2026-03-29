@@ -16,7 +16,13 @@ function getCpuUsage() {
 
 function getDiskUsage() {
   try {
-    const output = execSync("df -B1 / | tail -1", { encoding: 'utf8', timeout: 3000 });
+    // Try host's root disk first (works if /host/proc is mounted)
+    let output;
+    try {
+      output = execSync("df -B1 /host/proc 2>/dev/null | tail -1", { encoding: 'utf8', timeout: 3000 });
+    } catch {
+      output = execSync("df -B1 / | tail -1", { encoding: 'utf8', timeout: 3000 });
+    }
     const parts = output.trim().split(/\s+/);
     const total = parseInt(parts[1]);
     const used = parseInt(parts[2]);
@@ -48,12 +54,22 @@ function getLoadAvg() {
   return { '1m': loads[0]?.toFixed(2), '5m': loads[1]?.toFixed(2), '15m': loads[2]?.toFixed(2) };
 }
 
+const HOST_PROC = process.env.HOST_PROC || '/proc';
+
 function getSwap() {
   try {
-    const output = execSync("free -b | grep Swap", { encoding: 'utf8', timeout: 2000 });
-    const parts = output.trim().split(/\s+/);
-    return { total: parseInt(parts[1]) || 0, used: parseInt(parts[2]) || 0 };
-  } catch { return { total: 0, used: 0 }; }
+    // Try reading from host /proc if mounted
+    const meminfo = fs.readFileSync(`${HOST_PROC}/meminfo`, 'utf8');
+    const swapTotal = parseInt(meminfo.match(/SwapTotal:\s+(\d+)/)?.[1] || '0') * 1024;
+    const swapFree = parseInt(meminfo.match(/SwapFree:\s+(\d+)/)?.[1] || '0') * 1024;
+    return { total: swapTotal, used: swapTotal - swapFree };
+  } catch {
+    try {
+      const output = execSync("free -b | grep Swap", { encoding: 'utf8', timeout: 2000 });
+      const parts = output.trim().split(/\s+/);
+      return { total: parseInt(parts[1]) || 0, used: parseInt(parts[2]) || 0 };
+    } catch { return { total: 0, used: 0 }; }
+  }
 }
 
 function getTopProcesses() {
