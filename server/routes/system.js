@@ -69,8 +69,8 @@ function getTopProcesses() {
       }
     }
     // Filter out ps/head/tail/sh commands and low-value noise
-    const noise = ['ps ', 'head ', 'tail ', '/bin/sh -c ps', 'sh -c'];
-    return output.trim().split('\n').filter(Boolean).map(line => {
+    const noise = ['ps ', 'head ', 'tail ', '/bin/sh -c ps', 'sh -c', 'COMMAND', '%CPU', 'USER'];
+    return output.trim().split('\n').filter(Boolean).filter(line => !line.trim().startsWith('USER') && !line.includes('%CPU') && !line.includes('COMMAND')).map(line => {
       const parts = line.trim().split(/\s+/);
       if (parts.length >= 11) {
         return { user: parts[0], cpu: parts[2], mem: parts[3], command: parts.slice(10).join(' ').slice(0, 50) };
