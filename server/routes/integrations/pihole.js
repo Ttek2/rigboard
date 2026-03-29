@@ -132,25 +132,27 @@ router.post('/toggle', async (req, res) => {
 // GET /api/v1/integrations/pihole/top
 router.get('/top', async (req, res) => {
   const { url, apiKey } = getConfig(req.app.locals.db);
-  if (!url || !apiKey) return res.json({ error: 'API key required' });
+  if (!url) return res.json({ error: 'Pi-hole URL required' });
 
   try {
     // Try v6
     let sid;
-    try { sid = await getV6Session(url, apiKey); } catch {}
+    try { sid = apiKey ? await getV6Session(url, apiKey) : null; } catch (e) { console.error('Pi-hole v6 auth failed:', e.message); }
 
     if (sid) {
-      const [queries, blocked, clients] = await Promise.all([
-        fetch(`${url}/api/stats/top_domains?count=10`, { headers: { sid }, signal: AbortSignal.timeout(5000) }).then(r => r.json()),
-        fetch(`${url}/api/stats/top_domains?blocked=true&count=10`, { headers: { sid }, signal: AbortSignal.timeout(5000) }).then(r => r.json()),
-        fetch(`${url}/api/stats/top_clients?count=5`, { headers: { sid }, signal: AbortSignal.timeout(5000) }).then(r => r.json()),
+      try {
+        const [queries, blocked, clients] = await Promise.all([
+          fetch(`${url}/api/stats/top_domains?count=10`, { headers: { sid }, signal: AbortSignal.timeout(5000) }).then(r => r.json()),
+          fetch(`${url}/api/stats/top_domains?blocked=true&count=10`, { headers: { sid }, signal: AbortSignal.timeout(5000) }).then(r => r.json()),
+          fetch(`${url}/api/stats/top_clients?count=5`, { headers: { sid }, signal: AbortSignal.timeout(5000) }).then(r => r.json()),
       ]);
-      return res.json({
-        top_queries: queries.top_domains || {},
-        top_ads: blocked.top_domains || {},
-        top_clients: clients.top_clients || {},
-        version: 6,
-      });
+        return res.json({
+          top_queries: queries.top_domains || queries.domains || {},
+          top_ads: blocked.top_domains || blocked.domains || {},
+          top_clients: clients.top_clients || clients.clients || {},
+          version: 6,
+        });
+      } catch (e) { console.error('Pi-hole v6 top failed:', e.message); }
     }
 
     // Fall back to v5

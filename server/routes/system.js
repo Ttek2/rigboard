@@ -58,10 +58,21 @@ function getSwap() {
 
 function getTopProcesses() {
   try {
-    const output = execSync("ps aux --sort=-%cpu | head -6 | tail -5", { encoding: 'utf8', timeout: 2000 });
-    return output.trim().split('\n').map(line => {
+    // Try procps format first, then BusyBox fallback
+    let output;
+    try {
+      output = execSync("ps aux --sort=-%cpu 2>/dev/null | head -6 | tail -5", { encoding: 'utf8', timeout: 2000 });
+    } catch {
+      output = execSync("ps -eo user,%cpu,%mem,comm --sort=-%cpu 2>/dev/null | head -6 | tail -5", { encoding: 'utf8', timeout: 2000 });
+    }
+    return output.trim().split('\n').filter(Boolean).map(line => {
       const parts = line.trim().split(/\s+/);
-      return { user: parts[0], cpu: parts[2], mem: parts[3], command: parts.slice(10).join(' ').slice(0, 40) };
+      if (parts.length >= 11) {
+        // ps aux format
+        return { user: parts[0], cpu: parts[2], mem: parts[3], command: parts.slice(10).join(' ').slice(0, 40) };
+      }
+      // ps -eo format
+      return { user: parts[0], cpu: parts[1], mem: parts[2], command: parts.slice(3).join(' ').slice(0, 40) };
     });
   } catch { return []; }
 }
