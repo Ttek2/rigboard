@@ -17,7 +17,7 @@ RUN npm rebuild better-sqlite3 --build-from-source
 
 # Stage 3: Production
 FROM node:20-alpine
-RUN apk add --no-cache docker-cli procps
+RUN apk add --no-cache docker-cli procps util-linux
 WORKDIR /app
 COPY --from=backend /app/node_modules ./node_modules
 COPY server/ ./
