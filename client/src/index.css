@@ -31,6 +31,11 @@ body::before {
   background-repeat: no-repeat;
 }
 
+/* Widget card default background */
+.widget-card {
+  background-color: var(--bg-card);
+}
+
 /* react-grid-layout styles */
 .react-grid-layout {
   position: relative;
