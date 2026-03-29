@@ -16,5 +16,10 @@ services:
       - DATA_DIR=/app/data
       - HOST=0.0.0.0
       - HOST_PROC=/host/proc
+    security_opt:
+      - apparmor:unconfined
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
     restart: unless-stopped
     pid: host

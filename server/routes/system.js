@@ -69,12 +69,12 @@ function getDiskUsage() {
       const parts = output.trim().split(/\s+/);
       const total = parseInt(parts[1]) || 0;
       const used = parseInt(parts[2]) || 0;
-      uniqueDisks.push({ device: 'root', total, used, mountpoint: '/', percent: total > 0 ? Math.round((used / total) * 100) : 0 });
+      disks.push({ device: 'root', total, used, mountpoint: '/', percent: total > 0 ? Math.round((used / total) * 100) : 0 });
     } catch {}
   }
 
-  const root = uniqueDisks.find(d => d.mountpoint === '/') || uniqueDisks[0] || { total: 0, used: 0, percent: 0 };
-  return { total: root.total || 0, used: root.used || 0, percent: root.percent || 0, disks: uniqueDisks };
+  const root = disks.find(d => d.mountpoint === '/') || disks[0] || { total: 0, used: 0, percent: 0 };
+  return { total: root.total || 0, used: root.used || 0, percent: root.percent || 0, disks };
 }
 
 function getNetworkStats() {
@@ -166,41 +166,58 @@ function getTopProcesses() {
 
 // GET /api/v1/system/stats
 router.get('/stats', (req, res) => {
-  const totalMem = os.totalmem();
-  const freeMem = os.freemem();
-  const usedMem = totalMem - freeMem;
-  const disk = getDiskUsage();
-  const uptime = os.uptime();
-  const swap = getSwap();
-  const cpus = os.cpus();
-  const cpuUsage = getCpuUsage();
+  try {
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const disk = getDiskUsage();
+    const uptime = os.uptime();
+    const swap = getSwap();
+    const cpus = os.cpus();
+    const cpuUsage = getCpuUsage();
 
-  res.json({
-    cpu: {
-      model: cpus[0]?.model || 'Unknown',
-      cores: cpus.length,
-      usage: cpuUsage.overall,
-      per_core: cpuUsage.perCore,
-    },
-    load: getLoadAvg(),
-    memory: {
-      total: totalMem,
-      used: usedMem,
-      percent: Math.round((usedMem / totalMem) * 100)
-    },
-    swap: {
-      total: swap.total,
-      used: swap.used,
-      percent: swap.total > 0 ? Math.round((swap.used / swap.total) * 100) : 0
-    },
-    disk,
-    uptime,
-    hostname: os.hostname(),
-    platform: `${os.type()} ${os.release()}`,
-    arch: os.arch(),
-    processes: getTopProcesses(),
-    network: getNetworkStats()
-  });
+    res.json({
+      cpu: {
+        model: cpus[0]?.model || 'Unknown',
+        cores: cpus.length,
+        usage: cpuUsage.overall,
+        per_core: cpuUsage.perCore,
+      },
+      load: getLoadAvg(),
+      memory: {
+        total: totalMem,
+        used: usedMem,
+        percent: Math.round((usedMem / totalMem) * 100)
+      },
+      swap: {
+        total: swap.total,
+        used: swap.used,
+        percent: swap.total > 0 ? Math.round((swap.used / swap.total) * 100) : 0
+      },
+      disk,
+      uptime,
+      hostname: os.hostname(),
+      platform: `${os.type()} ${os.release()}`,
+      arch: os.arch(),
+      processes: getTopProcesses(),
+      network: getNetworkStats()
+    });
+  } catch (err) {
+    console.error('System stats error:', err.message);
+    res.json({
+      cpu: { model: 'Unknown', cores: os.cpus().length, usage: 0, per_core: [] },
+      load: getLoadAvg(),
+      memory: { total: os.totalmem(), used: os.totalmem() - os.freemem(), percent: Math.round(((os.totalmem() - os.freemem()) / os.totalmem()) * 100) },
+      swap: { total: 0, used: 0, percent: 0 },
+      disk: { total: 0, used: 0, percent: 0, disks: [] },
+      uptime: os.uptime(),
+      hostname: os.hostname(),
+      platform: `${os.type()} ${os.release()}`,
+      arch: os.arch(),
+      processes: [],
+      network: []
+    });
+  }
 });
 
 // POST /api/v1/system/backup
