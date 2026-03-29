@@ -48,9 +48,18 @@ export default function DockerWidget({ config, onRemove, onConfigure }) {
             <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg group"
               style={{ backgroundColor: 'var(--bg-primary)' }}>
               <div className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: STATE_COLORS[c.state] || '#6b7280' }} />
+                style={{ backgroundColor: c.health === 'unhealthy' ? '#ef4444' : STATE_COLORS[c.state] || '#6b7280' }}
+                title={c.health || c.state} />
               <div className="flex-1 min-w-0">
-                <span className="text-sm truncate block" style={{ color: 'var(--text-primary)' }}>{c.name}</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>{c.name}</span>
+                  {c.health && (
+                    <span className="text-[8px] px-1 rounded" style={{
+                      backgroundColor: c.health === 'healthy' ? '#22c55e22' : '#ef444422',
+                      color: c.health === 'healthy' ? '#22c55e' : '#ef4444'
+                    }}>{c.health}</span>
+                  )}
+                </div>
                 {stats[c.name] && c.state === 'running' && (
                   <span className="text-[10px] font-mono" style={{ color: 'var(--text-secondary)' }}>
                     CPU {stats[c.name].cpu} · Mem {stats[c.name].mem_pct}
