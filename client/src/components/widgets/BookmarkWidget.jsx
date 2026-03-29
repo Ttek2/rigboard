@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Bookmark, Plus, Trash2, ExternalLink } from 'lucide-react';
 import WidgetWrapper from '../WidgetWrapper';
 import { getBookmarks, createBookmark, deleteBookmark } from '../../api';
+import { on } from '../../events';
 
 export default function BookmarkWidget({ config, onRemove, onConfigure }) {
   const [bookmarks, setBookmarks] = useState([]);
@@ -11,6 +12,7 @@ export default function BookmarkWidget({ config, onRemove, onConfigure }) {
 
   const load = () => getBookmarks().then(setBookmarks).catch(console.error);
   useEffect(() => { load(); }, []);
+  useEffect(() => { const off = on('refresh:bookmarks', load); const off2 = on('refresh:all', load); return () => { off(); off2(); }; }, []);
 
   const handleAdd = async (e) => {
     e.preventDefault();

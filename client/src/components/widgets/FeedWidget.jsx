@@ -2,18 +2,19 @@ import { useState, useEffect } from 'react';
 import { Rss, ExternalLink } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import WidgetWrapper from '../WidgetWrapper';
+import { on } from '../../events';
 import { getLatestFeedItems } from '../../api';
 
 export default function FeedWidget({ config, onRemove, onConfigure }) {
   const [items, setItems] = useState([]);
 
+  const loadFeeds = () => getLatestFeedItems(20, config?.group).then(setItems).catch(console.error);
   useEffect(() => {
-    getLatestFeedItems(20, config?.group).then(setItems).catch(console.error);
-    const interval = setInterval(() => {
-      getLatestFeedItems(20, config?.group).then(setItems).catch(console.error);
-    }, 5 * 60 * 1000);
+    loadFeeds();
+    const interval = setInterval(loadFeeds, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [config?.group]);
+  useEffect(() => { const off = on('refresh:feeds', loadFeeds); const off2 = on('refresh:all', loadFeeds); return () => { off(); off2(); }; }, []);
 
   return (
     <WidgetWrapper title={config?.title || 'News Feed'} icon={Rss} onRemove={onRemove} onConfigure={onConfigure}>

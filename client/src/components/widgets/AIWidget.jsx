@@ -3,6 +3,7 @@ import { Bot, Send, Trash2, Eye, Loader, HeartPulse, Brain, X } from 'lucide-rea
 import { marked } from 'marked';
 import WidgetWrapper from '../WidgetWrapper';
 import { streamAIChat, getAIContext, triggerHeartbeat, getAIHistory, saveAIMessage, clearAIHistory, extractMemories, getAIMemory, executeAIAction, getAIAutonomy } from '../../api';
+import { emit } from '../../events';
 
 export default function AIWidget({ config, onRemove, onConfigure }) {
   const [messages, setMessages] = useState([]);
@@ -142,12 +143,31 @@ export default function AIWidget({ config, onRemove, onConfigure }) {
     const [state, setState] = useState(autoExec ? 'executing' : 'pending');
     const [result, setResult] = useState('');
 
+    // Map action types to the widget refresh events they should trigger
+    const ACTION_EVENTS = {
+      add_bookmark: 'refresh:bookmarks',
+      create_note: 'refresh:notes',
+      add_maintenance: 'refresh:maintenance',
+      log_maintenance: 'refresh:maintenance',
+      add_service: 'refresh:services',
+      add_feed: 'refresh:feeds',
+      docker_action: 'refresh:docker',
+      toggle_pihole: 'refresh:pihole',
+      update_setting: 'refresh:settings',
+      save_memory: 'refresh:ai',
+      create_backup: 'refresh:system',
+    };
+
     const handleConfirm = async () => {
       setState('executing');
       try {
         const r = await executeAIAction(action, params);
         setResult(r.message || 'Done');
         setState(r.success ? 'done' : 'error');
+        if (r.success) {
+          emit(ACTION_EVENTS[action] || 'refresh:all', { action, params });
+          emit('refresh:all', { action, params });
+        }
       } catch (e) { setResult(e.message); setState('error'); }
     };
 
