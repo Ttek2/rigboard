@@ -293,6 +293,7 @@ export default function AIWidget({ config, onRemove, onConfigure }) {
           </div>
           <div className="flex-1 relative">
             <input value={input} onChange={e => setInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               placeholder="Ask anything..."
               disabled={streaming}
               className="w-full px-2.5 py-1.5 pr-7 rounded-lg border text-xs"
