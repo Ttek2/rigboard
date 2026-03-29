@@ -1,0 +1,14 @@
+services:
+  rigboard:
+    image: rigboard/rigboard:latest
+    build: .
+    container_name: rigboard
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=${TZ:-Europe/Dublin}
+      - NODE_ENV=production
+      - DATA_DIR=/app/data
+    restart: unless-stopped
