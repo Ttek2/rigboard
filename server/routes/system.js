@@ -42,8 +42,9 @@ function getCpuUsage() {
 function getDiskUsage() {
   const HOST_PROC = process.env.HOST_PROC || '/proc';
   const disks = [];
+  const realFsTypes = ['ext4', 'ext3', 'ext2', 'xfs', 'btrfs', 'zfs', 'ntfs', 'vfat', 'f2fs', 'reiserfs'];
 
-  // Method 1: Execute df on the host via docker exec on PID 1's namespace
+  // Method 1: nsenter into host mount namespace (needs SYS_ADMIN + apparmor:unconfined)
   try {
     const output = execSync("nsenter -t 1 -m -u -n -- df -B1 -x tmpfs -x devtmpfs -x efivarfs -x squashfs 2>/dev/null", { encoding: 'utf8', timeout: 5000 });
     for (const line of output.trim().split('\n').slice(1)) {
@@ -62,16 +63,47 @@ function getDiskUsage() {
     }
   } catch {}
 
-  // Method 2: Fallback - regular df (only sees container's own mounts)
-  if (disks.length === 0) {
-    try {
-      const output = execSync("df -B1 / 2>/dev/null | tail -1", { encoding: 'utf8', timeout: 2000 });
-      const parts = output.trim().split(/\s+/);
-      const total = parseInt(parts[1]) || 0;
-      const used = parseInt(parts[2]) || 0;
-      disks.push({ device: 'root', total, used, mountpoint: '/', percent: total > 0 ? Math.round((used / total) * 100) : 0 });
-    } catch {}
-  }
+  // Method 2: Parse host /proc/1/mounts + statfs via /proc/1/root (needs pid:host + SYS_PTRACE)
+  try {
+    // Try both native /proc (pid:host) and bind-mounted HOST_PROC
+    let mounts;
+    try { mounts = fs.readFileSync('/proc/1/mounts', 'utf8'); } catch {}
+    if (!mounts) try { mounts = fs.readFileSync(`${HOST_PROC}/1/mounts`, 'utf8'); } catch {}
+    if (mounts) {
+      for (const line of mounts.split('\n')) {
+        const parts = line.split(' ');
+        if (parts.length < 3 || !parts[0].startsWith('/dev/') || !realFsTypes.includes(parts[2])) continue;
+        const device = parts[0];
+        const mountpoint = parts[1];
+        if (mountpoint.includes('/docker/') || mountpoint.includes('/overlay2/') || mountpoint.includes('/containers/')) continue;
+        // Try statfs via /proc/1/root (requires pid:host + SYS_PTRACE + apparmor:unconfined)
+        let stat;
+        try { stat = fs.statfsSync(`/proc/1/root${mountpoint}`); } catch {}
+        if (!stat) try { stat = fs.statfsSync(`${HOST_PROC}/1/root${mountpoint}`); } catch {}
+        if (stat) {
+          const bsize = Number(stat.bsize);
+          const total = Number(stat.blocks) * bsize;
+          const used = (Number(stat.blocks) - Number(stat.bfree)) * bsize;
+          if (total > 500 * 1024 * 1024) {
+            disks.push({ device: device.split('/').pop(), total, used, mountpoint, percent: total > 0 ? Math.round((used / total) * 100) : 0 });
+          }
+        }
+      }
+      if (disks.length > 0) {
+        const root = disks.find(d => d.mountpoint === '/') || disks[0];
+        return { total: root.total, used: root.used, percent: root.percent, disks };
+      }
+    }
+  } catch {}
+
+  // Method 3: Fallback - container df (only sees container's own root)
+  try {
+    const output = execSync("df -B1 / 2>/dev/null | tail -1", { encoding: 'utf8', timeout: 2000 });
+    const parts = output.trim().split(/\s+/);
+    const total = parseInt(parts[1]) || 0;
+    const used = parseInt(parts[2]) || 0;
+    disks.push({ device: 'root', total, used, mountpoint: '/', percent: total > 0 ? Math.round((used / total) * 100) : 0 });
+  } catch {}
 
   const root = disks.find(d => d.mountpoint === '/') || disks[0] || { total: 0, used: 0, percent: 0 };
   return { total: root.total || 0, used: root.used || 0, percent: root.percent || 0, disks };

@@ -122,11 +122,10 @@ services:
       - TZ=Europe/Dublin
       - HOST_PROC=/host/proc                           # Tell RigBoard where host /proc is mounted
     security_opt:
-      - apparmor:unconfined                            # Required for nsenter (host disk detection)
+      - apparmor:unconfined                            # System widget: allows host disk detection
     cap_add:
-      - SYS_PTRACE                                     # Required for nsenter namespace access
-      - SYS_ADMIN                                      # Required for nsenter namespace access
-    pid: host                                          # System widget: host processes + all disks via nsenter
+      - SYS_PTRACE                                     # System widget: allows host disk detection
+    pid: host                                          # System widget: host processes + all disks
     restart: unless-stopped
 ```
 
