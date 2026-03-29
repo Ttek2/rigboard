@@ -16,17 +16,34 @@ function getCpuUsage() {
 
 function getDiskUsage() {
   try {
-    // Try host's root disk first (works if /host/proc is mounted)
-    let output;
+    // Read from /host/proc/mounts to find real root filesystem, then check its stats
+    const HOST_PROC = process.env.HOST_PROC || '/proc';
+    let rootDevice = null;
+
     try {
-      output = execSync("df -B1 /host/proc 2>/dev/null | tail -1", { encoding: 'utf8', timeout: 3000 });
-    } catch {
+      const mounts = fs.readFileSync(`${HOST_PROC}/mounts`, 'utf8');
+      const rootLine = mounts.split('\n').find(l => l.includes(' / ') && !l.includes('overlay') && !l.includes('tmpfs'));
+      if (rootLine) rootDevice = rootLine.split(' ')[0];
+    } catch {}
+
+    // Try df on the host's root device, or common paths
+    let output;
+    if (rootDevice) {
+      try { output = execSync(`df -B1 ${rootDevice} 2>/dev/null | tail -1`, { encoding: 'utf8', timeout: 3000 }); } catch {}
+    }
+    if (!output) {
+      // Try /host/sys as a proxy to the host filesystem
+      try { output = execSync("df -B1 /host/sys 2>/dev/null | tail -1", { encoding: 'utf8', timeout: 3000 }); } catch {}
+    }
+    if (!output) {
+      // Fallback: read from /host/proc/diskstats or just use df /
       output = execSync("df -B1 / | tail -1", { encoding: 'utf8', timeout: 3000 });
     }
+
     const parts = output.trim().split(/\s+/);
-    const total = parseInt(parts[1]);
-    const used = parseInt(parts[2]);
-    return { total, used, percent: Math.round((used / total) * 100) };
+    const total = parseInt(parts[1]) || 0;
+    const used = parseInt(parts[2]) || 0;
+    return { total, used, percent: total > 0 ? Math.round((used / total) * 100) : 0 };
   } catch {
     return { total: 0, used: 0, percent: 0 };
   }
@@ -74,25 +91,38 @@ function getSwap() {
 
 function getTopProcesses() {
   try {
+    // With pid:host in compose, ps aux sees host processes
+    // Without it, try reading /host/proc directly
     let output;
     try {
-      output = execSync("ps aux --sort=-%cpu 2>/dev/null | head -8 | tail -7", { encoding: 'utf8', timeout: 2000 });
+      output = execSync("ps aux --sort=-%cpu 2>/dev/null | head -12 | tail -11", { encoding: 'utf8', timeout: 3000 });
     } catch {
       try {
-        output = execSync("ps -eo user,%cpu,%mem,comm --sort=-%cpu 2>/dev/null | head -8 | tail -7", { encoding: 'utf8', timeout: 2000 });
+        output = execSync("ps -eo user,%cpu,%mem,comm --sort=-%cpu 2>/dev/null | head -12 | tail -11", { encoding: 'utf8', timeout: 3000 });
       } catch {
         return [];
       }
     }
-    // Filter out ps/head/tail/sh commands and low-value noise
-    const noise = ['ps ', 'head ', 'tail ', '/bin/sh -c ps', 'sh -c', 'COMMAND', '%CPU', 'USER'];
-    return output.trim().split('\n').filter(Boolean).filter(line => !line.trim().startsWith('USER') && !line.includes('%CPU') && !line.includes('COMMAND')).map(line => {
-      const parts = line.trim().split(/\s+/);
-      if (parts.length >= 11) {
-        return { user: parts[0], cpu: parts[2], mem: parts[3], command: parts.slice(10).join(' ').slice(0, 50) };
-      }
-      return { user: parts[0], cpu: parts[1], mem: parts[2], command: parts.slice(3).join(' ').slice(0, 50) };
-    }).filter(p => !noise.some(n => p.command.startsWith(n))).slice(0, 5);
+
+    const noise = ['ps ', 'head ', 'tail ', '/bin/sh -c', 'sh -c'];
+    const results = output.trim().split('\n')
+      .filter(Boolean)
+      .filter(line => !line.trim().startsWith('USER') && !line.includes('%CPU') && !line.includes('COMMAND'))
+      .map(line => {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 11) {
+          return { user: parts[0], cpu: parts[2], mem: parts[3], command: parts.slice(10).join(' ').slice(0, 50) };
+        }
+        return { user: parts[0], cpu: parts[1], mem: parts[2], command: parts.slice(3).join(' ').slice(0, 50) };
+      })
+      .filter(p => !noise.some(n => p.command.startsWith(n)) && parseFloat(p.cpu) > 0)
+      .slice(0, 5);
+
+    // If we only got 1-2 results (container-only), note it
+    if (results.length <= 1) {
+      results.push({ user: '-', cpu: '-', mem: '-', command: 'Add pid:host to compose for host processes' });
+    }
+    return results;
   } catch { return []; }
 }
 
