@@ -55,9 +55,11 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({ credentials: true, origin: true }));
 app.use(express.json({ limit: '5mb' }));
 
-// Session for auth
+// Session for auth (SQLite-backed, no memory leak)
+const SqliteStore = require('better-sqlite3-session-store')(session);
 const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
 app.use(session({
+  store: new SqliteStore({ client: db, expired: { clear: true, intervalMs: 900000 } }),
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
