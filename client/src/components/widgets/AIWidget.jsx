@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Bot, Send, Trash2, Eye, Loader, HeartPulse, Brain, X } from 'lucide-react';
 import { marked } from 'marked';
 import WidgetWrapper from '../WidgetWrapper';
-import { streamAIChat, getAIContext, triggerHeartbeat, getAIHistory, saveAIMessage, clearAIHistory, extractMemories, getAIMemory, executeAIAction, getAIAutonomy } from '../../api';
+import { streamAIChat, getAIContext, triggerHeartbeat, getAIHistory, saveAIMessage, clearAIHistory, extractMemories, getAIMemory, executeAIAction, getAIAutonomy, webSearch } from '../../api';
 import { emit } from '../../events';
 
 export default function AIWidget({ config, onRemove, onConfigure }) {
@@ -87,6 +87,54 @@ export default function AIWidget({ config, onRemove, onConfigure }) {
         }
       }
 
+      // Check for [SEARCH:query] -- run search, inject results, get synthesized response
+      const searchMatch = assistantContent.match(/\[SEARCH:([^\]]+)\]/);
+      if (searchMatch) {
+        const searchQuery = searchMatch[1].trim();
+        setMessages(prev => {
+          const updated = [...prev];
+          updated[updated.length - 1] = { role: 'assistant', content: `Searching the web for "${searchQuery}"...` };
+          return updated;
+        });
+
+        try {
+          const searchData = await webSearch(searchQuery);
+          const searchResults = searchData.ok
+            ? searchData.results.map(r => `${r.title}: ${r.snippet} (${r.url})`).join('\n')
+            : 'No results found.';
+
+          // Re-send with search results as context
+          const followUpMessages = [
+            ...newMessages,
+            { role: 'assistant', content: `I searched for "${searchQuery}".` },
+            { role: 'system', content: `Web search results for "${searchQuery}":\n${searchResults}\n\nSynthesize these into a clear, natural response. Do NOT dump raw URLs or results. Summarize findings conversationally. Cite sources by name (e.g. "according to Tom's Hardware") not by URL.` },
+          ];
+
+          const followUp = await streamAIChat(followUpMessages, config?.include_context !== false);
+          if (followUp.ok) {
+            const reader2 = followUp.body.getReader();
+            const decoder2 = new TextDecoder();
+            let followUpContent = '';
+            setMessages(prev => { const u = [...prev]; u[u.length - 1] = { role: 'assistant', content: '' }; return u; });
+
+            while (true) {
+              const { done, value } = await reader2.read();
+              if (done) break;
+              for (const line of decoder2.decode(value, { stream: true }).split('\n').filter(l => l.startsWith('data: '))) {
+                if (line.slice(6) === '[DONE]') continue;
+                try {
+                  followUpContent += JSON.parse(line.slice(6)).choices?.[0]?.delta?.content || '';
+                  setMessages(prev => { const u = [...prev]; u[u.length - 1] = { role: 'assistant', content: followUpContent }; return u; });
+                } catch {}
+              }
+            }
+            assistantContent = followUpContent;
+          }
+        } catch (e) {
+          setMessages(prev => { const u = [...prev]; u[u.length - 1] = { role: 'assistant', content: `Search failed: ${e.message}` }; return u; });
+        }
+      }
+
       // Persist assistant message
       saveAIMessage('assistant', assistantContent).catch(() => {});
 
@@ -121,7 +169,7 @@ export default function AIWidget({ config, onRemove, onConfigure }) {
   };
 
   // Strip [MEMORY:...] tags from display text
-  const cleanContent = (text) => text.replace(/\[MEMORY:[^\]]+\]/g, '').replace(/\[ACTION:[^\]]+\]/g, '').trim();
+  const cleanContent = (text) => text.replace(/\[MEMORY:[^\]]+\]/g, '').replace(/\[ACTION:[^\]]+\]/g, '').replace(/\[SEARCH:[^\]]+\]/g, '').trim();
 
   // Parse [ACTION:name|key=val|key=val] from text
   const parseActions = (text) => {
