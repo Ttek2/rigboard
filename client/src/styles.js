@@ -8,30 +8,26 @@ const STYLES = {
     description: 'Frosted translucent cards with depth',
     group: 'Card Style',
     css: `
-      .react-grid-item > div > div:first-child {
+      .widget-card {
         backdrop-filter: blur(16px) !important;
         -webkit-backdrop-filter: blur(16px) !important;
-        background-color: color-mix(in srgb, var(--bg-card) 55%, transparent) !important;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05) !important;
-        border: 1px solid rgba(255,255,255,0.08) !important;
+        background-color: color-mix(in srgb, var(--bg-card) 45%, transparent) !important;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06) !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+      }
+      .widget-card .widget-drag-handle {
+        border-color: rgba(255,255,255,0.06) !important;
       }
       nav {
         backdrop-filter: blur(20px) !important;
         -webkit-backdrop-filter: blur(20px) !important;
-        background-color: color-mix(in srgb, var(--bg-secondary) 60%, transparent) !important;
+        background-color: color-mix(in srgb, var(--bg-secondary) 50%, transparent) !important;
         border-bottom: 1px solid rgba(255,255,255,0.06) !important;
       }
-      .react-grid-item > div > div:first-child > div {
-        background-color: transparent !important;
-      }
-      .react-grid-item > div > div:first-child .widget-drag-handle {
-        background-color: transparent !important;
-        border-color: rgba(255,255,255,0.06) !important;
-      }
-      .react-grid-item > div > div:first-child input,
-      .react-grid-item > div > div:first-child textarea,
-      .react-grid-item > div > div:first-child select {
-        background-color: color-mix(in srgb, var(--bg-primary) 40%, transparent) !important;
+      .widget-card input,
+      .widget-card textarea,
+      .widget-card select {
+        background-color: color-mix(in srgb, var(--bg-primary) 35%, transparent) !important;
         backdrop-filter: blur(8px) !important;
         -webkit-backdrop-filter: blur(8px) !important;
       }

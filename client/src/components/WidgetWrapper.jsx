@@ -2,8 +2,8 @@ import { GripVertical, X, Settings } from 'lucide-react';
 
 export default function WidgetWrapper({ title, icon: Icon, children, onRemove, onConfigure }) {
   return (
-    <div className="group h-full flex flex-col rounded-xl border overflow-hidden"
-      style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+    <div className="group h-full flex flex-col rounded-xl border overflow-hidden widget-card"
+      style={{ borderColor: 'var(--border)' }}>
       <div className="flex items-center justify-between px-3 py-2 border-b cursor-move widget-drag-handle"
         style={{ borderColor: 'var(--border)' }}>
         <div className="flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
