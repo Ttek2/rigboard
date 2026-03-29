@@ -116,13 +116,12 @@ services:
     volumes:
       - ./data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker widget: container list, start/stop/restart
-      - /proc:/host/proc:ro                            # System widget: real CPU, RAM, swap, processes
+      - /proc:/host/proc:ro                            # System widget: CPU, RAM, swap
       - /sys:/host/sys:ro                              # System widget: host hardware info
-      - /:/host/root:ro                                # System widget: detect all host disks
     environment:
       - TZ=Europe/Dublin
       - HOST_PROC=/host/proc                           # Tell RigBoard where host /proc is mounted
-    pid: host                                          # System widget: see host processes, not container
+    pid: host                                          # System widget: host processes + all disks via nsenter
     restart: unless-stopped
 ```
 
