@@ -192,7 +192,7 @@ function buildContext(db) {
 
 function buildMemoryContext(db) {
   const memories = db.prepare('SELECT key, value FROM ai_memory ORDER BY updated_at DESC LIMIT 20').all();
-  if (memories.length === 0) return '';
+  if (memories.length === 0) return 'AI Memory: empty. You have not saved any memories yet. Use [MEMORY:key=value] to remember things about the user.';
   return 'AI Memory (things you learned about this user):\n' +
     memories.map(m => `  ${m.key}: ${m.value}`).join('\n');
 }
@@ -282,11 +282,8 @@ The system will automatically search, feed results back to you, and you will the
 ${require('./ai-actions').getActionPrompt(db)}`
   });
 
-  // Always include memory (it's the AI's own knowledge, not dashboard state)
-  const memoryContext = buildMemoryContext(db);
-  if (memoryContext) {
-    systemMessages.push({ role: 'system', content: memoryContext });
-  }
+  // Always include memory state
+  systemMessages.push({ role: 'system', content: buildMemoryContext(db) });
 
   if (include_context !== false) {
     const context = buildContext(db);
