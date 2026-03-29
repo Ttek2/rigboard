@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getWidgetLayout, saveWidgetLayout } from '../api';
 
 const BASE = '/api/v1';
@@ -187,12 +187,16 @@ export default function useWidgetLayout(tabId, version = 0) {
   const [widgets, setWidgets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cols, setCols] = useState(4);
+  const initialRenderRef = useRef(true);
 
   useEffect(() => {
     setLoading(true);
+    initialRenderRef.current = true;
     fetchLayout(tabId).then(w => {
       setWidgets(w.map(widget => ({ ...widget, widget_config: typeof widget.widget_config === 'string' ? JSON.parse(widget.widget_config) : widget.widget_config })));
       setLoading(false);
+      // Skip the first 2 onLayoutChange calls (react-grid-layout fires on mount + after first paint)
+      setTimeout(() => { initialRenderRef.current = false; }, 1000);
     }).catch(() => setLoading(false));
   }, [tabId, version]);
 
@@ -207,6 +211,10 @@ export default function useWidgetLayout(tabId, version = 0) {
   }));
 
   const onLayoutChange = useCallback((newLayout) => {
+    // Skip saves during initial render — react-grid-layout fires onLayoutChange
+    // on mount which would overwrite stored positions with recomputed ones
+    if (initialRenderRef.current) return;
+
     const updated = widgets.map((widget, i) => {
       const layoutItem = newLayout.find(l => l.i === String(widget.id || i));
       if (!layoutItem) return widget;
