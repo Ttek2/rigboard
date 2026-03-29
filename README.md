@@ -15,79 +15,89 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 ## Features
 
 ### Dashboard
-- 23 widget types with drag-and-drop grid layout
+- 24 widget types with drag-and-drop grid layout
 - Smart masonry packing with auto-arrange ("Tidy" button fills every gap)
 - Multiple dashboard tabs with configurable 3/4/5 column layouts
 - Widget configuration via gear icon -- no YAML editing
 - 14 color themes (Nord, Dracula, Tokyo Night, Catppuccin, Gruvbox, Synthwave, and more)
 - 10 stackable visual styles (Glass, Retro CRT, Brutalist, Compact, Wide, and more)
+- Custom background wallpaper (upload or URL) with adjustable text size
 - PWA installable as a browser app
 
 ### Community Pulse
-- Real-time trending tech intelligence from 39 sources (Reddit, Hacker News, Google Trends, RSS outlets)
-- AI-powered sentiment analysis, severity classification, and price extraction
+- Real-time trending tech intelligence from 39+ sources (Reddit, Hacker News, Google Trends, RSS outlets)
+- AI-powered sentiment analysis (5 levels), severity classification, and price extraction with currency detection
 - "In your rig" badges -- highlights trending topics that match your hardware
 - Deals feed, price alerts, velocity keywords
-- Per-topic sparkline charts and creator stats
+- Per-topic sparkline charts, creator stats, and grouped source links
+- Topics organized by sentiment (positive to negative)
 - Powered by [ttek2.com](https://ttek2.com) API
 
 ### AI Assistant
-- Dashboard-aware AI chat with persistent memory across sessions
+- Dashboard-aware AI chat with persistent memory and chat history across sessions
 - Supports any OpenAI-compatible endpoint (OpenAI, Ollama, LM Studio, Groq, etc.)
-- 11 executable actions with confirmation prompts (add bookmarks, create notes, restart Docker containers, etc.)
+- 12 executable actions with confirmation prompts (add bookmarks, create notes, restart Docker containers, web search, etc.)
 - Three autonomy levels: Confirm All, Semi-Autonomous, Full Autonomous
 - AI heartbeat: periodic proactive monitoring with notifications
-- Context-aware: sees your rigs, services, feeds, trending topics, community activity
+- Web search integration (Brave Search API, SearXNG, DuckDuckGo)
+- Full context awareness: rigs, services, feeds, trending topics, community, Docker, system stats
+- Live widget updates when AI executes actions
 
 ### Hardware Tracker
 - Document PC builds with nested component hierarchies
-- Track warranties, purchase prices, total build costs, price history
+- Track warranties, purchase dates, prices, total build costs, price history
+- Edit any component inline with full field set
 - Maintenance logging with recurring schedules and webhook alerts
 - Shareable rig builds via public links
 - Bulk import components from CSV or JSON
 - Rig timeline view (chronological maintenance + component events)
 - Component photo gallery
+- Rig overview widget shows GPU/CPU/RAM specs, total cost, warranty alerts
 
 ### Content
 - RSS/Atom feed reader with group filtering and OPML import/export
+- Works with Reddit RSS, Hacker News, Mastodon, Lemmy feeds
 - Inline article reader view
 - Feed item starring (read later)
 - Default feeds ship from configurable `server/defaults/feeds.json`
-- Markdown notes with live preview
+- Markdown notes with live preview, search, word count, pin support
 - Bookmarks with favicons
-- Web search widget (DuckDuckGo, Google, Brave, SearXNG)
-- Global search (Cmd+K) with quick actions
+- Web search widget with inline API results (DuckDuckGo, Brave Search, SearXNG) or redirect (Google, Bing, Startpage)
+- Global search (Cmd+K) with quick actions command palette
 
 ### Homelab Integrations
 - **Service Health** -- HTTP health checks with uptime %, sparkline history, avg/p95 response times
 - **Jellyseerr/Overseerr** -- View and approve/deny media requests
-- **Sonarr/Radarr** -- Stats, upcoming calendar, download queue with progress
-- **Plex/Jellyfin** -- Library counts, now playing, recently added
-- **Pi-hole/AdGuard** -- Stats, top domains, toggle blocking on/off
-- **Docker** -- Container status with start/stop/restart actions, per-container CPU/memory
-- **qBittorrent/Transmission** -- Active downloads with progress and speed
-- **Home Assistant** -- Entity states via HA REST API
-- **GitHub Releases** -- Track updates for self-hosted apps
+- **Sonarr/Radarr** -- Stats (monitored/missing/queue), upcoming calendar, download queue with progress
+- **Plex/Jellyfin** -- Library counts per collection, now playing with progress, recently added with ratings
+- **Pi-hole** -- Donut chart, stats, toggle blocking, expandable top blocked/queried/clients bar charts (supports v5 and v6)
+- **Docker** -- Container status with health badges, start/stop/restart actions, per-container CPU/memory via Docker socket API
+- **qBittorrent/Transmission** -- Active downloads with progress bars and speed
+- **Home Assistant** -- Entity states via HA REST API, configurable entity filter
+- **GitHub Releases** -- Track latest releases for self-hosted apps you run
 
 ### Community
-- Ttek2 community integration -- comment on articles, discuss trending topics
-- Rig badges and "Owns This Hardware" verified badges
+- Ttek2 community integration -- browse articles, comment, discuss trending topics from dashboard
+- Rig badges and "Owns This Hardware" verified badges on comments
 - Threaded comments with voting and reporting
-- Community content browsable directly from the dashboard
+- Outbound webhooks for community events (HMAC-signed)
+- OAuth-free: simple toggle to connect, no popups
 
 ### System & Monitoring
-- System stats widget (CPU per-core, RAM, disk, swap, load average, top processes)
-- Network info widget (WAN IP, local IPs, DNS, gateway, latency)
-- Notification center (maintenance overdue, service down, warranty expiring, AI insights)
-- Incoming webhook receiver (Uptime Kuma, Grafana, GitHub)
+- System stats widget (CPU per-core, RAM, disk, swap, load average, top host processes)
+- Full host monitoring from inside Docker (via mounted /proc, /sys, pid:host)
+- Network info widget (WAN IP, local IPs, DNS, gateway, ping latency)
+- Notification center (maintenance overdue, service down, warranty expiring, AI insights, webhook alerts)
+- Incoming webhook receiver (Uptime Kuma, Grafana, GitHub, generic)
 - Prometheus metrics endpoint at `/metrics`
-- Server-Sent Events for real-time updates
+- Server-Sent Events for real-time status updates
 
-### Security
-- Optional password authentication with session management
+### Security & Settings
+- Optional password authentication with session management (SQLite-backed sessions)
 - TOTP two-factor authentication (Google Authenticator, Authy, etc.)
 - Auto-backup daily with 7-day retention + manual backup button
 - Export/import full configuration as JSON
+- Tabbed settings UI (General, Services, Data, Security, Community, API)
 
 ## Docker Compose
 
@@ -100,8 +110,13 @@ services:
       - "0.0.0.0:3000:3000"
     volumes:
       - ./data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker monitoring
+      - /proc:/host/proc:ro                            # Host system stats
+      - /sys:/host/sys:ro                              # Host system info
     environment:
       - TZ=Europe/Dublin
+      - HOST_PROC=/host/proc
+    pid: host  # See host processes in System widget
     restart: unless-stopped
 ```
 
@@ -135,6 +150,7 @@ Vite dev server on http://localhost:5173 proxies `/api` to Express on http://loc
 - Interactive docs: `/api/docs` (Swagger UI)
 - Prometheus metrics: `/metrics`
 - Incoming webhooks: `POST /api/v1/webhooks/incoming`
+- Web search: `GET /api/v1/websearch?q=...` (Brave/SearXNG/DuckDuckGo)
 - Community Pulse: powered by [ttek2.com/api/trending/pulse](https://ttek2.com/api/trending/pulse)
 
 All configuration through the web UI. Environment variables:
@@ -145,6 +161,7 @@ All configuration through the web UI. Environment variables:
 | `HOST` | `0.0.0.0` | Bind address (0.0.0.0 for LAN access) |
 | `TZ` | `Europe/Dublin` | Timezone |
 | `DATA_DIR` | `/app/data` | Database and uploads |
+| `HOST_PROC` | `/proc` | Host proc mount path (set to /host/proc in Docker) |
 
 ## Contributing
 
