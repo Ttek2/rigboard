@@ -9,15 +9,31 @@ const STYLES = {
     group: 'Card Style',
     css: `
       .react-grid-item > div > div:first-child {
-        backdrop-filter: blur(12px) !important;
-        -webkit-backdrop-filter: blur(12px) !important;
-        background-color: color-mix(in srgb, var(--bg-card) 72%, transparent) !important;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.2) !important;
-      }
-      nav {
         backdrop-filter: blur(16px) !important;
         -webkit-backdrop-filter: blur(16px) !important;
-        background-color: color-mix(in srgb, var(--bg-secondary) 80%, transparent) !important;
+        background-color: color-mix(in srgb, var(--bg-card) 55%, transparent) !important;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+      }
+      nav {
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        background-color: color-mix(in srgb, var(--bg-secondary) 60%, transparent) !important;
+        border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+      }
+      .react-grid-item > div > div:first-child > div {
+        background-color: transparent !important;
+      }
+      .react-grid-item > div > div:first-child .widget-drag-handle {
+        background-color: transparent !important;
+        border-color: rgba(255,255,255,0.06) !important;
+      }
+      .react-grid-item > div > div:first-child input,
+      .react-grid-item > div > div:first-child textarea,
+      .react-grid-item > div > div:first-child select {
+        background-color: color-mix(in srgb, var(--bg-primary) 40%, transparent) !important;
+        backdrop-filter: blur(8px) !important;
+        -webkit-backdrop-filter: blur(8px) !important;
       }
     `
   },
