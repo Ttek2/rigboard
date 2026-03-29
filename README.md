@@ -36,10 +36,12 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 ### AI Assistant
 - Dashboard-aware AI chat with persistent memory and chat history across sessions
 - Supports any OpenAI-compatible endpoint (OpenAI, Ollama, LM Studio, Groq, etc.)
-- 12 executable actions with confirmation prompts (add bookmarks, create notes, restart Docker containers, web search, etc.)
+- 12 executable actions with confirmation prompts (add bookmarks, create notes, restart Docker containers, etc.)
 - Three autonomy levels: Confirm All, Semi-Autonomous, Full Autonomous
 - AI heartbeat: periodic proactive monitoring with notifications
-- Web search integration (Brave Search API, SearXNG, DuckDuckGo)
+- Web search: AI searches the web (Brave/SearXNG/DuckDuckGo), synthesizes results into natural responses
+- First-run onboarding: asks your name, setup preferences, offers to save hardware to My Rigs
+- Shows active model name and local/API badge in the widget
 - Full context awareness: rigs, services, feeds, trending topics, community, Docker, system stats
 - Live widget updates when AI executes actions
 
@@ -85,7 +87,7 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 
 ### System & Monitoring
 - System stats widget with real-time delta CPU calculation (updates every 5s)
-- Full host monitoring from inside Docker: CPU, RAM, disk, swap, load average, top processes
+- Full host monitoring from inside Docker: CPU, RAM, multi-disk detection, swap, load average, top processes
 - Network widget shows real host IPs, gateway, DNS, hostname (not container IPs)
 - Docker widget with container health badges, start/stop/restart via socket API
 - Notification center (maintenance overdue, service down, warranty expiring, AI insights, webhook alerts)
