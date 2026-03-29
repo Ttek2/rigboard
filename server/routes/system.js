@@ -41,36 +41,35 @@ function getCpuUsage() {
 
 function getDiskUsage() {
   try {
-    // Read from /host/proc/mounts to find real root filesystem, then check its stats
-    const HOST_PROC = process.env.HOST_PROC || '/proc';
-    let rootDevice = null;
+    // Get ALL real filesystems, pick the ones that matter
+    const output = execSync("df -B1 -x tmpfs -x devtmpfs -x overlay -x squashfs -x efivarfs 2>/dev/null || df -B1 / 2>/dev/null", { encoding: 'utf8', timeout: 3000 });
+    const lines = output.trim().split('\n').slice(1); // skip header
+    const disks = [];
 
-    try {
-      const mounts = fs.readFileSync(`${HOST_PROC}/mounts`, 'utf8');
-      const rootLine = mounts.split('\n').find(l => l.includes(' / ') && !l.includes('overlay') && !l.includes('tmpfs'));
-      if (rootLine) rootDevice = rootLine.split(' ')[0];
-    } catch {}
+    for (const line of lines) {
+      const parts = line.trim().split(/\s+/);
+      if (parts.length < 6) continue;
+      const device = parts[0];
+      const total = parseInt(parts[1]) || 0;
+      const used = parseInt(parts[2]) || 0;
+      const mountpoint = parts[5];
 
-    // Try df on the host's root device, or common paths
-    let output;
-    if (rootDevice) {
-      try { output = execSync(`df -B1 ${rootDevice} 2>/dev/null | tail -1`, { encoding: 'utf8', timeout: 3000 }); } catch {}
-    }
-    if (!output) {
-      // Try /host/sys as a proxy to the host filesystem
-      try { output = execSync("df -B1 /host/sys 2>/dev/null | tail -1", { encoding: 'utf8', timeout: 3000 }); } catch {}
-    }
-    if (!output) {
-      // Fallback: read from /host/proc/diskstats or just use df /
-      output = execSync("df -B1 / | tail -1", { encoding: 'utf8', timeout: 3000 });
+      // Skip tiny/virtual filesystems
+      if (total < 1024 * 1024 * 100) continue; // skip < 100MB
+      if (device.startsWith('/dev/') || mountpoint === '/') {
+        disks.push({ device, total, used, mountpoint, percent: total > 0 ? Math.round((used / total) * 100) : 0 });
+      }
     }
 
-    const parts = output.trim().split(/\s+/);
-    const total = parseInt(parts[1]) || 0;
-    const used = parseInt(parts[2]) || 0;
-    return { total, used, percent: total > 0 ? Math.round((used / total) * 100) : 0 };
+    // If we found disks, return the root one or the largest
+    if (disks.length > 0) {
+      const root = disks.find(d => d.mountpoint === '/') || disks.sort((a, b) => b.total - a.total)[0];
+      return { total: root.total, used: root.used, percent: root.percent, disks };
+    }
+
+    return { total: 0, used: 0, percent: 0, disks: [] };
   } catch {
-    return { total: 0, used: 0, percent: 0 };
+    return { total: 0, used: 0, percent: 0, disks: [] };
   }
 }
 

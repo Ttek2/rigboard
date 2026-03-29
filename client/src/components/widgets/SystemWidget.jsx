@@ -59,13 +59,24 @@ export default function SystemWidget({ config, onRemove, onConfigure }) {
             </div>
             <Bar percent={stats.memory.percent} color={stats.memory.percent > 85 ? '#ef4444' : stats.memory.percent > 70 ? '#f59e0b' : '#22c55e'} />
           </div>
-          <div>
-            <div className="flex justify-between text-xs mb-1">
-              <span style={{ color: 'var(--text-secondary)' }}>Disk</span>
-              <span style={{ color: 'var(--text-primary)' }}>{stats.disk.percent}%</span>
+          {/* Disks */}
+          {stats.disk?.disks?.length > 0 ? stats.disk.disks.map((d, i) => (
+            <div key={i}>
+              <div className="flex justify-between text-xs mb-1">
+                <span style={{ color: 'var(--text-secondary)' }}>{d.mountpoint === '/' ? 'Disk (root)' : d.mountpoint}</span>
+                <span style={{ color: 'var(--text-primary)' }}>{formatBytes(d.used)} / {formatBytes(d.total)}</span>
+              </div>
+              <Bar percent={d.percent} color={d.percent > 90 ? '#ef4444' : d.percent > 75 ? '#f59e0b' : '#22c55e'} />
             </div>
-            <Bar percent={stats.disk.percent} color={stats.disk.percent > 90 ? '#ef4444' : stats.disk.percent > 75 ? '#f59e0b' : '#22c55e'} />
-          </div>
+          )) : (
+            <div>
+              <div className="flex justify-between text-xs mb-1">
+                <span style={{ color: 'var(--text-secondary)' }}>Disk</span>
+                <span style={{ color: 'var(--text-primary)' }}>{stats.disk.percent}%</span>
+              </div>
+              <Bar percent={stats.disk.percent} color={stats.disk.percent > 90 ? '#ef4444' : stats.disk.percent > 75 ? '#f59e0b' : '#22c55e'} />
+            </div>
+          )}
           {/* Swap */}
           {stats.swap?.total > 0 && (
             <div>
