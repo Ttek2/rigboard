@@ -40,7 +40,31 @@ router.get('/', (req, res) => {
       WHERE c.rig_id = ? AND ms.next_due < datetime('now')
     `).get(rig.id).count;
 
-    return { ...rig, component_count: componentCount, next_maintenance: nextMaintenance, overdue_count: overdueCount };
+    // Key components for summary display
+    const gpu = db.prepare("SELECT name, model FROM components WHERE rig_id = ? AND category = 'GPU' LIMIT 1").get(rig.id);
+    const cpu = db.prepare("SELECT name, model FROM components WHERE rig_id = ? AND category = 'CPU' LIMIT 1").get(rig.id);
+    const ram = db.prepare("SELECT name, model FROM components WHERE rig_id = ? AND category = 'RAM' LIMIT 1").get(rig.id);
+    const totalCost = db.prepare('SELECT SUM(purchase_price) as total FROM components WHERE rig_id = ?').get(rig.id).total || 0;
+    const currency = db.prepare('SELECT currency FROM components WHERE rig_id = ? AND purchase_price IS NOT NULL LIMIT 1').get(rig.id)?.currency || 'EUR';
+
+    // Warranty alerts
+    const expiringWarranties = db.prepare(`
+      SELECT COUNT(*) as count FROM components WHERE rig_id = ?
+      AND warranty_expires IS NOT NULL AND warranty_expires > date('now') AND warranty_expires <= date('now', '+30 days')
+    `).get(rig.id).count;
+
+    return {
+      ...rig,
+      component_count: componentCount,
+      next_maintenance: nextMaintenance,
+      overdue_count: overdueCount,
+      gpu: gpu ? (gpu.model ? `${gpu.name} ${gpu.model}` : gpu.name) : null,
+      cpu: cpu ? (cpu.model ? `${cpu.name} ${cpu.model}` : cpu.name) : null,
+      ram: ram ? (ram.model ? `${ram.name} ${ram.model}` : ram.name) : null,
+      total_cost: totalCost,
+      currency,
+      expiring_warranties: expiringWarranties,
+    };
   });
 
   res.json(rigData);
