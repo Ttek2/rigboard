@@ -68,13 +68,21 @@ router.get('/stats', async (req, res) => {
       });
       const data = await r.json();
       if (!data.error) {
+        // v6 response varies — check multiple possible field paths for blocking status
+        const blocking = data.dns?.blocking_enabled ?? data.blocking ?? data.status?.blocking ?? true;
+        const queriesTotal = data.queries?.total ?? data.dns_queries_today ?? 0;
+        const queriesBlocked = data.queries?.blocked ?? data.ads_blocked_today ?? 0;
+        const pctBlocked = data.queries?.percent_blocked ?? data.ads_percentage_today ?? 0;
+        const domainsBlocked = data.gravity?.domains_being_blocked ?? data.domains_being_blocked ?? 0;
+
         return res.json({
-          queries_today: data.queries?.total,
-          blocked_today: data.queries?.blocked,
-          percent_blocked: data.queries?.percent_blocked,
-          domains_blocked: data.gravity?.domains_being_blocked,
-          status: data.dns?.blocking_enabled ? 'enabled' : 'disabled',
+          queries_today: queriesTotal,
+          blocked_today: queriesBlocked,
+          percent_blocked: pctBlocked,
+          domains_blocked: domainsBlocked,
+          status: blocking === true || blocking === 'enabled' ? 'enabled' : 'disabled',
           version: 6,
+          _raw_keys: Object.keys(data), // debug: shows available top-level keys
         });
       }
     }

@@ -8,9 +8,13 @@ services:
     volumes:
       - ./data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
     environment:
       - TZ=${TZ:-Europe/Dublin}
       - NODE_ENV=production
       - DATA_DIR=/app/data
       - HOST=0.0.0.0
+      - HOST_PROC=/host/proc
     restart: unless-stopped
+    pid: host
