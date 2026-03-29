@@ -92,12 +92,16 @@ export default function SystemWidget({ config, onRemove, onConfigure }) {
           {/* Top processes */}
           {stats.processes?.length > 0 && (
             <div>
-              <p className="text-[10px] font-medium uppercase mb-1" style={{ color: 'var(--text-secondary)' }}>Top Processes</p>
-              {stats.processes.slice(0, 4).map((p, i) => (
+              <div className="flex items-center justify-between text-[9px] mb-0.5" style={{ color: 'var(--text-secondary)' }}>
+                <span className="flex-1">Top Processes</span>
+                <span className="ml-2 w-10 text-right">CPU</span>
+                <span className="ml-2 w-10 text-right">RAM</span>
+              </div>
+              {stats.processes.slice(0, 5).map((p, i) => (
                 <div key={i} className="flex items-center justify-between text-[10px] py-0.5" style={{ color: 'var(--text-secondary)' }}>
                   <span className="truncate flex-1" style={{ color: 'var(--text-primary)' }}>{p.command}</span>
-                  <span className="ml-2 font-mono">{p.cpu}%</span>
-                  <span className="ml-2 font-mono w-10 text-right">{p.mem}%</span>
+                  <span className="ml-2 font-mono w-10 text-right" style={{ color: parseFloat(p.cpu) > 50 ? '#ef4444' : parseFloat(p.cpu) > 20 ? '#f59e0b' : 'var(--text-secondary)' }}>{p.cpu}%</span>
+                  <span className="ml-2 font-mono w-10 text-right" style={{ color: parseFloat(p.mem) > 50 ? '#ef4444' : parseFloat(p.mem) > 20 ? '#f59e0b' : 'var(--text-secondary)' }}>{p.mem}%</span>
                 </div>
               ))}
             </div>
