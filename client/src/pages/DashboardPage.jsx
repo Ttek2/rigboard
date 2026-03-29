@@ -66,10 +66,13 @@ export default function DashboardPage() {
   const [configWidget, setConfigWidget] = useState(null);
   const { width, containerRef } = useContainerWidth();
 
+  const [tabsLoaded, setTabsLoaded] = useState(false);
+
   const loadTabs = () => getTabs().then(t => {
     setTabs(t);
     if (!activeTab && t.length > 0) setActiveTab(t[0].id);
-  }).catch(console.error);
+    setTabsLoaded(true);
+  }).catch(() => setTabsLoaded(true));
 
   useEffect(() => { loadTabs(); }, []);
 
@@ -77,8 +80,11 @@ export default function DashboardPage() {
   const cols = currentTab?.cols || 4;
   const { widgets, layout, loading, onLayoutChange, addWidget, removeWidget, autoArrange, setCols } = useWidgetLayout(activeTab, layoutVersion);
 
-  // Keep the hook's col count in sync with the tab's setting
-  useEffect(() => { setCols(cols); }, [cols, setCols]);
+  // Keep the hook's col count in sync — but only after tabs have loaded
+  useEffect(() => { if (tabsLoaded) setCols(cols); }, [cols, setCols, tabsLoaded]);
+
+  // Don't save layout changes until tabs are loaded (prevents overwriting 5-col layout with default 4-col)
+  const safeOnLayoutChange = tabsLoaded ? onLayoutChange : () => {};
 
   return (
     <div ref={containerRef}>
@@ -181,7 +187,7 @@ export default function DashboardPage() {
           cols={{ lg: cols, md: 2, sm: 1 }}
           rowHeight={40}
           draggableHandle=".widget-drag-handle"
-          onLayoutChange={(newLayout) => onLayoutChange(newLayout)}
+          onLayoutChange={(newLayout) => safeOnLayoutChange(newLayout)}
           isResizable={true}
           compactType="vertical"
         >
