@@ -58,22 +58,25 @@ function getSwap() {
 
 function getTopProcesses() {
   try {
-    // Try procps format first, then BusyBox fallback
     let output;
     try {
-      output = execSync("ps aux --sort=-%cpu 2>/dev/null | head -6 | tail -5", { encoding: 'utf8', timeout: 2000 });
+      output = execSync("ps aux --sort=-%cpu 2>/dev/null | head -8 | tail -7", { encoding: 'utf8', timeout: 2000 });
     } catch {
-      output = execSync("ps -eo user,%cpu,%mem,comm --sort=-%cpu 2>/dev/null | head -6 | tail -5", { encoding: 'utf8', timeout: 2000 });
+      try {
+        output = execSync("ps -eo user,%cpu,%mem,comm --sort=-%cpu 2>/dev/null | head -8 | tail -7", { encoding: 'utf8', timeout: 2000 });
+      } catch {
+        return [];
+      }
     }
+    // Filter out ps/head/tail/sh commands and low-value noise
+    const noise = ['ps ', 'head ', 'tail ', '/bin/sh -c ps', 'sh -c'];
     return output.trim().split('\n').filter(Boolean).map(line => {
       const parts = line.trim().split(/\s+/);
       if (parts.length >= 11) {
-        // ps aux format
-        return { user: parts[0], cpu: parts[2], mem: parts[3], command: parts.slice(10).join(' ').slice(0, 40) };
+        return { user: parts[0], cpu: parts[2], mem: parts[3], command: parts.slice(10).join(' ').slice(0, 50) };
       }
-      // ps -eo format
-      return { user: parts[0], cpu: parts[1], mem: parts[2], command: parts.slice(3).join(' ').slice(0, 40) };
-    });
+      return { user: parts[0], cpu: parts[1], mem: parts[2], command: parts.slice(3).join(' ').slice(0, 50) };
+    }).filter(p => !noise.some(n => p.command.startsWith(n))).slice(0, 5);
   } catch { return []; }
 }
 

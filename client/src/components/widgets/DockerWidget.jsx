@@ -35,7 +35,13 @@ export default function DockerWidget({ config, onRemove, onConfigure }) {
   return (
     <WidgetWrapper title="Docker" icon={Container} onRemove={onRemove} onConfigure={onConfigure}>
       {containers.length === 0 ? (
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No containers found.</p>
+        <div className="text-center py-2">
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No containers found</p>
+          <p className="text-[10px] mt-1" style={{ color: 'var(--text-secondary)' }}>
+            If running in Docker, add to your compose:<br/>
+            <code className="text-[9px]" style={{ color: 'var(--accent)' }}>- /var/run/docker.sock:/var/run/docker.sock:ro</code>
+          </p>
+        </div>
       ) : (
         <div className="space-y-1">
           {containers.map((c, i) => (

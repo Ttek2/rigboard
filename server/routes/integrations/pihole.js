@@ -146,10 +146,20 @@ router.get('/top', async (req, res) => {
           fetch(`${url}/api/stats/top_domains?blocked=true&count=10`, { headers: { sid }, signal: AbortSignal.timeout(5000) }).then(r => r.json()),
           fetch(`${url}/api/stats/top_clients?count=5`, { headers: { sid }, signal: AbortSignal.timeout(5000) }).then(r => r.json()),
       ]);
+        // v6 returns arrays of {domain, count} — normalize to {domain: count} objects
+        const normalize = (arr) => {
+          if (!arr) return {};
+          if (Array.isArray(arr)) {
+            const obj = {};
+            for (const item of arr) obj[item.domain || item.name || item.ip || item.client || String(item)] = item.count || item.queries || 0;
+            return obj;
+          }
+          return arr;
+        };
         return res.json({
-          top_queries: queries.top_domains || queries.domains || {},
-          top_ads: blocked.top_domains || blocked.domains || {},
-          top_clients: clients.top_clients || clients.clients || {},
+          top_queries: normalize(queries.top_domains || queries.domains || queries),
+          top_ads: normalize(blocked.top_domains || blocked.domains || blocked),
+          top_clients: normalize(clients.top_clients || clients.clients || clients),
           version: 6,
         });
       } catch (e) { console.error('Pi-hole v6 top failed:', e.message); }
