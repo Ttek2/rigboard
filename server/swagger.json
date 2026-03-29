@@ -1,0 +1,73 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "RigBoard API",
+    "version": "1.0.0",
+    "description": "API for RigBoard — your rig, your news, your dashboard."
+  },
+  "servers": [{ "url": "/api/v1" }],
+  "paths": {
+    "/auth/status": { "get": { "summary": "Check auth status", "tags": ["Auth"], "responses": { "200": { "description": "Auth status" } } } },
+    "/auth/login": { "post": { "summary": "Login with password", "tags": ["Auth"], "requestBody": { "content": { "application/json": { "schema": { "type": "object", "properties": { "password": { "type": "string" } } } } } }, "responses": { "200": { "description": "Success" } } } },
+    "/auth/setup": { "post": { "summary": "Enable/disable auth and set password", "tags": ["Auth"] } },
+    "/settings": {
+      "get": { "summary": "Get all settings", "tags": ["Settings"], "responses": { "200": { "description": "Key-value settings" } } },
+      "put": { "summary": "Update settings", "tags": ["Settings"] }
+    },
+    "/settings/export": { "post": { "summary": "Export full configuration as JSON", "tags": ["Settings"] } },
+    "/settings/import": { "post": { "summary": "Import configuration from JSON", "tags": ["Settings"] } },
+    "/widgets/layout": {
+      "get": { "summary": "Get widget layout", "tags": ["Widgets"], "parameters": [{ "name": "tab_id", "in": "query", "schema": { "type": "integer" } }] },
+      "put": { "summary": "Save widget layout", "tags": ["Widgets"] }
+    },
+    "/tabs": {
+      "get": { "summary": "List dashboard tabs", "tags": ["Tabs"] },
+      "post": { "summary": "Create tab", "tags": ["Tabs"] }
+    },
+    "/tabs/{id}": {
+      "put": { "summary": "Update tab", "tags": ["Tabs"], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }] },
+      "delete": { "summary": "Delete tab", "tags": ["Tabs"] }
+    },
+    "/rigs": {
+      "get": { "summary": "List all rigs with component counts", "tags": ["Hardware"] },
+      "post": { "summary": "Create rig (multipart form)", "tags": ["Hardware"] }
+    },
+    "/rigs/{id}": {
+      "get": { "summary": "Get rig with components and maintenance", "tags": ["Hardware"], "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }] },
+      "put": { "summary": "Update rig", "tags": ["Hardware"] },
+      "delete": { "summary": "Delete rig", "tags": ["Hardware"] }
+    },
+    "/rigs/{id}/components": { "get": { "summary": "List components", "tags": ["Hardware"] }, "post": { "summary": "Add component", "tags": ["Hardware"] } },
+    "/rigs/{id}/import": { "post": { "summary": "Bulk import components (JSON array)", "tags": ["Hardware"] } },
+    "/rigs/{id}/timeline": { "get": { "summary": "Get rig timeline (maintenance + component events)", "tags": ["Hardware"] } },
+    "/components/{id}": { "put": { "summary": "Update component", "tags": ["Components"] }, "delete": { "summary": "Delete component", "tags": ["Components"] } },
+    "/components/{id}/maintenance": { "get": { "summary": "Get maintenance history", "tags": ["Components"] }, "post": { "summary": "Log maintenance action", "tags": ["Components"] } },
+    "/components/{id}/schedule": { "post": { "summary": "Create maintenance schedule", "tags": ["Components"] } },
+    "/components/{id}/images": { "get": { "summary": "List component images", "tags": ["Components"] }, "post": { "summary": "Upload component image", "tags": ["Components"] } },
+    "/maintenance/upcoming": { "get": { "summary": "Get all upcoming/overdue maintenance", "tags": ["Maintenance"] } },
+    "/feeds": { "get": { "summary": "List all feeds", "tags": ["Feeds"] }, "post": { "summary": "Add feed by URL", "tags": ["Feeds"] } },
+    "/feeds/defaults": { "get": { "summary": "Get default feed list", "tags": ["Feeds"] } },
+    "/feeds/items/latest": { "get": { "summary": "Latest items across feeds", "tags": ["Feeds"], "parameters": [{ "name": "limit", "in": "query", "schema": { "type": "integer" } }, { "name": "group", "in": "query", "schema": { "type": "string" } }] } },
+    "/feeds/items/starred": { "get": { "summary": "Get starred feed items", "tags": ["Feeds"] } },
+    "/feeds/items/{itemId}/star": { "post": { "summary": "Toggle star on feed item", "tags": ["Feeds"] } },
+    "/feeds/opml": { "get": { "summary": "Export feeds as OPML", "tags": ["Feeds"] }, "post": { "summary": "Import feeds from OPML", "tags": ["Feeds"] } },
+    "/articles/{itemId}": { "get": { "summary": "Get article content for reader view", "tags": ["Articles"] } },
+    "/services": { "get": { "summary": "List services", "tags": ["Services"] }, "post": { "summary": "Add service", "tags": ["Services"] } },
+    "/services/status": { "get": { "summary": "Get service status with uptime and sparkline data", "tags": ["Services"] } },
+    "/bookmarks": { "get": { "summary": "List bookmarks", "tags": ["Bookmarks"] }, "post": { "summary": "Create bookmark", "tags": ["Bookmarks"] } },
+    "/notes": { "get": { "summary": "List notes", "tags": ["Notes"] }, "post": { "summary": "Create note", "tags": ["Notes"] } },
+    "/search": { "get": { "summary": "Global search across feeds, rigs, components, bookmarks, notes", "tags": ["Search"], "parameters": [{ "name": "q", "in": "query", "required": true, "schema": { "type": "string" } }] } },
+    "/notifications": { "get": { "summary": "List notifications", "tags": ["Notifications"] }, "delete": { "summary": "Clear all notifications", "tags": ["Notifications"] } },
+    "/notifications/unread-count": { "get": { "summary": "Get unread notification count", "tags": ["Notifications"] } },
+    "/system/stats": { "get": { "summary": "Get system CPU/RAM/disk/uptime stats", "tags": ["System"] } },
+    "/system/backup": { "post": { "summary": "Create database backup", "tags": ["System"] } },
+    "/docker/containers": { "get": { "summary": "List Docker containers", "tags": ["Docker"] } },
+    "/webhooks/incoming": { "post": { "summary": "Receive incoming webhook (Uptime Kuma, Grafana, GitHub, etc.)", "tags": ["Webhooks"] } },
+    "/webhooks/log": { "get": { "summary": "View webhook log", "tags": ["Webhooks"] } },
+    "/share/rig/{id}": { "post": { "summary": "Create shareable link for rig", "tags": ["Share"] }, "delete": { "summary": "Remove share link", "tags": ["Share"] } },
+    "/share/{token}": { "get": { "summary": "View shared rig (public)", "tags": ["Share"] } },
+    "/prices/{componentId}": { "get": { "summary": "Get price history for component", "tags": ["Prices"] }, "post": { "summary": "Record price", "tags": ["Prices"] } },
+    "/homeassistant/entities": { "get": { "summary": "List Home Assistant entities", "tags": ["Home Assistant"] } },
+    "/homeassistant/entity/{id}": { "get": { "summary": "Get single HA entity state", "tags": ["Home Assistant"] } }
+  }
+}

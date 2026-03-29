@@ -1,0 +1,9 @@
+[
+  { "url": "https://feeds.arstechnica.com/arstechnica/index", "group_name": "Hardware News" },
+  { "url": "https://forums.anandtech.com/forums/-/index.rss", "group_name": "Hardware News" },
+  { "url": "https://www.reddit.com/r/selfhosted/.rss", "group_name": "Communities" },
+  { "url": "https://www.reddit.com/r/pcgaming/.rss", "group_name": "Gaming" },
+  { "url": "https://www.reddit.com/r/homelab/.rss", "group_name": "Communities" },
+  { "url": "https://hnrss.org/frontpage", "group_name": "Tech News" },
+  { "url": "https://ttek2.com/rss.xml", "group_name": "Tech News" }
+]
