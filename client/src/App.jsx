@@ -35,12 +35,7 @@ function App() {
     // Apply font size
     if (s.font_size) document.documentElement.style.setProperty('--font-size', s.font_size + 'px');
 
-    // Apply wallpaper
-    if (s.wallpaper_url) {
-      document.documentElement.style.setProperty('--bg-wallpaper', `url(${s.wallpaper_url})`);
-    } else {
-      document.documentElement.style.setProperty('--bg-wallpaper', 'none');
-    }
+    // Wallpaper is handled by a real <img> element in the render
 
     // Apply custom CSS
     let styleEl = document.getElementById('rigboard-custom-css');
@@ -114,6 +109,12 @@ function App() {
     <SettingsContext.Provider value={{ settings, refreshSettings }}>
       <BrowserRouter>
         <div className="min-h-screen" style={{ backgroundColor: settings.wallpaper_url ? 'transparent' : 'var(--bg-primary)' }}>
+          {/* Wallpaper as real img for full quality rendering */}
+          {settings.wallpaper_url && (
+            <img src={settings.wallpaper_url} alt=""
+              className="fixed inset-0 w-full h-full object-cover"
+              style={{ zIndex: -1, pointerEvents: 'none' }} />
+          )}
           <nav className="sticky top-0 z-50 border-b" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
             <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
               <NavLink to="/" className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--accent)', textDecoration: 'none' }}>

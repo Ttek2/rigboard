@@ -20,16 +20,7 @@ body {
   min-height: 100vh;
 }
 
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background-image: var(--bg-wallpaper, none);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-}
+/* Wallpaper is rendered as a real <img> element by App.jsx for full quality */
 
 /* Widget card default background */
 .widget-card {
