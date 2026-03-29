@@ -282,8 +282,28 @@ The system will automatically search, feed results back to you, and you will the
 ${require('./ai-actions').getActionPrompt(db)}`
   });
 
-  // Always include memory state
-  systemMessages.push({ role: 'system', content: buildMemoryContext(db) });
+  // Memory state
+  const memoryContext = buildMemoryContext(db);
+  systemMessages.push({ role: 'system', content: memoryContext });
+
+  // First-run onboarding: if no memories AND this is the first message in the conversation
+  const memoryCount = db.prepare('SELECT COUNT(*) as c FROM ai_memory').get().c;
+  const chatCount = db.prepare('SELECT COUNT(*) as c FROM ai_chat_messages').get().c;
+  if (memoryCount === 0 && chatCount <= 1) {
+    systemMessages.push({
+      role: 'system',
+      content: `FIRST RUN ONBOARDING: This is the user's first interaction with you. Be warm and welcoming. Introduce yourself briefly as RigBoard AI, then ask a few friendly questions ONE AT A TIME (don't overwhelm them):
+
+1. First, ask their name and what they'd like to be called
+2. After they respond, save it with [MEMORY:user_name=their name]
+3. Then ask what they primarily use their setup for (gaming, homelab, development, content creation, etc.)
+4. Save that too with [MEMORY:primary_use=their answer]
+5. Ask if they'd like to tell you about their main PC build (CPU, GPU, RAM) -- mention you can save it to "My Rigs" for them
+6. If they share hardware, use [ACTION:] tags to add components to their rig
+
+Keep it conversational and brief. Don't ask all questions at once -- ask one, wait for their response, then ask the next. If the user just says "hi" or similar, start with asking their name.`
+    });
+  }
 
   if (include_context !== false) {
     const context = buildContext(db);

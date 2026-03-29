@@ -263,9 +263,12 @@ export default function AIWidget({ config, onRemove, onConfigure }) {
         <div ref={scrollRef} className="flex-1 overflow-auto space-y-2 mb-2" style={{ minHeight: 0 }}>
           {messages.length === 0 && !contextPreview && (
             <div className="text-center py-4">
-              <Bot size={24} className="mx-auto mb-2" style={{ color: 'var(--text-secondary)' }} />
-              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                Dashboard-aware AI with persistent memory. Ask about your hardware, services, or trending topics.
+              <Bot size={24} className="mx-auto mb-2" style={{ color: memoryCount === 0 ? 'var(--accent)' : 'var(--text-secondary)' }} />
+              <p className="text-xs" style={{ color: 'var(--text-primary)' }}>
+                {memoryCount === 0 ? 'Welcome to RigBoard AI! Say hi to get started.' : 'Dashboard-aware AI with persistent memory.'}
+              </p>
+              <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                {memoryCount === 0 ? 'I\'ll ask a few questions to get to know you.' : 'Ask about your hardware, services, or trending topics.'}
               </p>
               <div className="flex items-center justify-center gap-3 mt-1 text-[10px]" style={{ color: 'var(--text-secondary)' }}>
                 {memoryCount > 0 && (
@@ -280,7 +283,10 @@ export default function AIWidget({ config, onRemove, onConfigure }) {
                 </span>
               </div>
               <div className="flex flex-wrap gap-1 justify-center mt-2">
-                {['What maintenance is due?', 'Summarize trending topics', 'Any deals for my rig?', 'Remember: my budget is 500 EUR'].map(q => (
+                {(memoryCount === 0
+                  ? ['Hi!', 'Hey, let\'s get started', 'Hello RigBoard AI']
+                  : ['What maintenance is due?', 'Summarize trending topics', 'Any deals for my rig?', 'Search for latest GPU prices']
+                ).map(q => (
                   <button key={q} onClick={() => setInput(q)}
                     className="px-2 py-1 rounded border text-[10px] hover:border-cyan-500/50 transition-colors"
                     style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
