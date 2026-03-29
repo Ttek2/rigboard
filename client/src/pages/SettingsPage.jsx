@@ -23,6 +23,8 @@ export default function SettingsPage() {
   const [colorOverrides, setColorOverrides] = useState({});
   const [customCss, setCustomCss] = useState('');
   const [weatherCity, setWeatherCity] = useState('');
+  const [fontSize, setFontSize] = useState(14);
+  const [wallpaperUrl, setWallpaperUrl] = useState('');
   const [services, setServices] = useState([]);
   const [showAddService, setShowAddService] = useState(false);
   const [svc, setSvc] = useState({ name: '', url: '', icon: '', group_name: 'Default' });
@@ -36,6 +38,8 @@ export default function SettingsPage() {
     try { setColorOverrides(JSON.parse(settings.color_overrides || '{}')); } catch { setColorOverrides({}); }
     setCustomCss(settings.custom_css || '');
     setWeatherCity(settings.weather_city || '');
+    setFontSize(parseInt(settings.font_size) || 14);
+    setWallpaperUrl(settings.wallpaper_url || '');
     getServices().then(setServices).catch(console.error);
   }, [settings]);
 
@@ -43,7 +47,8 @@ export default function SettingsPage() {
     await updateSettings({
       dashboard_title: title, theme, visual_styles: JSON.stringify(activeStyles),
       color_overrides: JSON.stringify(colorOverrides),
-      custom_css: customCss, weather_city: weatherCity
+      custom_css: customCss, weather_city: weatherCity,
+      font_size: String(fontSize), wallpaper_url: wallpaperUrl
     });
     applyTheme(theme, colorOverrides);
     refreshSettings();
@@ -98,6 +103,70 @@ export default function SettingsPage() {
                 <Field label="Title">
                   {input({ value: title, onChange: e => setTitle(e.target.value) })}
                 </Field>
+                <Field label="Text Size">
+                  <div className="flex items-center gap-3">
+                    <input type="range" min="11" max="20" value={fontSize}
+                      onChange={e => { setFontSize(Number(e.target.value)); document.documentElement.style.setProperty('--font-size', e.target.value + 'px'); }}
+                      className="flex-1" />
+                    <span className="text-sm font-mono w-12 text-right" style={{ color: 'var(--text-primary)' }}>{fontSize}px</span>
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    {[{ label: 'Small', size: 12 }, { label: 'Default', size: 14 }, { label: 'Large', size: 16 }, { label: 'XL', size: 18 }].map(p => (
+                      <button key={p.size} onClick={() => { setFontSize(p.size); document.documentElement.style.setProperty('--font-size', p.size + 'px'); }}
+                        className={`px-2 py-1 rounded text-xs ${fontSize === p.size ? 'font-medium' : ''}`}
+                        style={{
+                          color: fontSize === p.size ? 'var(--accent)' : 'var(--text-secondary)',
+                          backgroundColor: fontSize === p.size ? 'var(--accent)11' : 'transparent',
+                        }}>
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+
+                <Field label="Background Wallpaper">
+                  <p className="text-[10px] mb-1.5" style={{ color: 'var(--text-secondary)' }}>
+                    Paste an image URL or upload a local file. Works best with the Glass visual style.
+                  </p>
+                  <div className="flex gap-2">
+                    <input value={wallpaperUrl} onChange={e => {
+                        setWallpaperUrl(e.target.value);
+                        document.documentElement.style.setProperty('--bg-wallpaper', e.target.value ? `url(${e.target.value})` : 'none');
+                      }}
+                      placeholder="https://images.unsplash.com/..."
+                      className="flex-1 px-3 py-2 rounded-lg border text-sm"
+                      style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+                    <button onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file'; input.accept = 'image/*';
+                        input.onchange = async (e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = () => {
+                            setWallpaperUrl(reader.result);
+                            document.documentElement.style.setProperty('--bg-wallpaper', `url(${reader.result})`);
+                          };
+                          reader.readAsDataURL(file);
+                        };
+                        input.click();
+                      }}
+                      className="px-3 py-2 rounded-lg border text-sm"
+                      style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                      Upload
+                    </button>
+                  </div>
+                  {wallpaperUrl && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <img src={wallpaperUrl} alt="" className="h-12 w-20 object-cover rounded" />
+                      <button onClick={() => { setWallpaperUrl(''); document.documentElement.style.setProperty('--bg-wallpaper', 'none'); }}
+                        className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </Field>
+
                 <Field label="Weather City">
                   {input({ value: weatherCity, onChange: e => setWeatherCity(e.target.value), placeholder: 'e.g. Dublin' })}
                 </Field>

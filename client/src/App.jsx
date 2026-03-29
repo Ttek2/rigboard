@@ -32,6 +32,16 @@ function App() {
     // Apply visual style layers
     try { applyStyle(JSON.parse(s.visual_styles || '[]')); } catch { applyStyle([]); }
 
+    // Apply font size
+    if (s.font_size) document.documentElement.style.setProperty('--font-size', s.font_size + 'px');
+
+    // Apply wallpaper
+    if (s.wallpaper_url) {
+      document.documentElement.style.setProperty('--bg-wallpaper', `url(${s.wallpaper_url})`);
+    } else {
+      document.documentElement.style.setProperty('--bg-wallpaper', 'none');
+    }
+
     // Apply custom CSS
     let styleEl = document.getElementById('rigboard-custom-css');
     if (s.custom_css) {
