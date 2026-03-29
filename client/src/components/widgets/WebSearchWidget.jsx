@@ -19,22 +19,24 @@ export default function WebSearchWidget({ config, onRemove, onConfigure }) {
   const [results, setResults] = useState(null);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [lastQuery, setLastQuery] = useState('');
+  const [lastEngine, setLastEngine] = useState('');
   const engineId = config?.engine || settings.search_provider || 'duckduckgo';
 
-  const handleSearch = async (e, overrideEngine) => {
-    e?.preventDefault();
-    if (!query.trim()) return;
-    const eng = overrideEngine || engineId;
+  const doSearch = async (q, eng, pg = 1) => {
     const engDef = ENGINES[eng];
-
     if (engDef?.hasApi) {
       setSearching(true);
-      setResults(null);
       setError(null);
+      if (pg === 1) setResults(null);
       try {
-        const data = await webSearch(query.trim(), eng);
+        const data = await webSearch(q, eng, pg);
         if (data.ok) {
           setResults(data.results);
+          setPage(pg);
+          setLastQuery(q);
+          setLastEngine(eng);
         } else {
           setError(data.error);
           setResults([]);
@@ -42,8 +44,14 @@ export default function WebSearchWidget({ config, onRemove, onConfigure }) {
       } catch (e) { setError(e.message); setResults([]); }
       setSearching(false);
     } else if (engDef?.url) {
-      window.open(`${engDef.url}${encodeURIComponent(query.trim())}`, '_blank');
+      window.open(`${engDef.url}${encodeURIComponent(q)}`, '_blank');
     }
+  };
+
+  const handleSearch = (e, overrideEngine) => {
+    e?.preventDefault();
+    if (!query.trim()) return;
+    doSearch(query.trim(), overrideEngine || engineId, 1);
   };
 
   return (
@@ -129,6 +137,36 @@ export default function WebSearchWidget({ config, onRemove, onConfigure }) {
                 {r.snippet && <p className="text-[10px] mt-0.5 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{r.snippet}</p>}
               </a>
             ))}
+
+            {/* Pagination */}
+            {results.length > 0 && (
+              <div className="flex items-center justify-between pt-2 mt-1 border-t" style={{ borderColor: 'var(--border)' }}>
+                <button onClick={() => doSearch(lastQuery, lastEngine, page - 1)}
+                  disabled={page <= 1}
+                  className="px-2 py-1 rounded text-[10px] transition-colors"
+                  style={{ color: page <= 1 ? 'var(--border)' : 'var(--accent)', cursor: page <= 1 ? 'default' : 'pointer' }}>
+                  Previous
+                </button>
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 10 }, (_, i) => i + 1).map(p => (
+                    <button key={p} onClick={() => doSearch(lastQuery, lastEngine, p)}
+                      className={`w-5 h-5 rounded text-[9px] ${p === page ? 'font-bold' : ''}`}
+                      style={{
+                        color: p === page ? 'var(--accent)' : 'var(--text-secondary)',
+                        backgroundColor: p === page ? 'var(--accent)11' : 'transparent',
+                      }}>
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => doSearch(lastQuery, lastEngine, page + 1)}
+                  disabled={page >= 10 || results.length === 0}
+                  className="px-2 py-1 rounded text-[10px] transition-colors"
+                  style={{ color: page >= 10 ? 'var(--border)' : 'var(--accent)', cursor: page >= 10 ? 'default' : 'pointer' }}>
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

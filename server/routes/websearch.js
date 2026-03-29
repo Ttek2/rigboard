@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 
 // Search providers
-async function searchBrave(query, apiKey, count = 5) {
-  const res = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${count}`, {
+async function searchBrave(query, apiKey, count = 5, offset = 0) {
+  const res = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${count}&offset=${offset}`, {
     headers: { 'X-Subscription-Token': apiKey, Accept: 'application/json' },
     signal: AbortSignal.timeout(10000),
   });
@@ -16,8 +16,8 @@ async function searchBrave(query, apiKey, count = 5) {
   }));
 }
 
-async function searchSearxng(query, instanceUrl, count = 5) {
-  const res = await fetch(`${instanceUrl.replace(/\/$/, '')}/search?q=${encodeURIComponent(query)}&format=json&categories=general&pageno=1`, {
+async function searchSearxng(query, instanceUrl, count = 5, page = 1) {
+  const res = await fetch(`${instanceUrl.replace(/\/$/, '')}/search?q=${encodeURIComponent(query)}&format=json&categories=general&pageno=${page}`, {
     signal: AbortSignal.timeout(10000),
   });
   const data = await res.json();
@@ -50,26 +50,28 @@ async function searchDuckDuckGo(query, count = 5) {
 // GET /api/v1/websearch?q=query
 router.get('/', async (req, res) => {
   const db = req.app.locals.db;
-  const { q, provider, count } = req.query;
+  const { q, provider, count, page } = req.query;
   if (!q) return res.status(400).json({ error: 'Query required' });
 
   const searchProvider = provider || db.prepare("SELECT value FROM settings WHERE key = 'search_provider'").get()?.value || 'duckduckgo';
   const resultCount = parseInt(count) || 5;
+  const pageNum = Math.max(1, Math.min(10, parseInt(page) || 1));
+  const offset = (pageNum - 1) * resultCount;
 
   try {
     let results;
     if (searchProvider === 'brave') {
       const apiKey = db.prepare("SELECT value FROM settings WHERE key = 'brave_search_api_key'").get()?.value;
       if (!apiKey) return res.status(400).json({ error: 'Brave Search API key not configured. Set brave_search_api_key in settings.' });
-      results = await searchBrave(q, apiKey, resultCount);
+      results = await searchBrave(q, apiKey, resultCount, offset);
     } else if (searchProvider === 'searxng') {
       const instanceUrl = db.prepare("SELECT value FROM settings WHERE key = 'searxng_url'").get()?.value;
       if (!instanceUrl) return res.status(400).json({ error: 'SearXNG URL not configured. Set searxng_url in settings.' });
-      results = await searchSearxng(q, instanceUrl, resultCount);
+      results = await searchSearxng(q, instanceUrl, resultCount, pageNum);
     } else {
       results = await searchDuckDuckGo(q, resultCount);
     }
-    res.json({ ok: true, provider: searchProvider, query: q, results });
+    res.json({ ok: true, provider: searchProvider, query: q, page: pageNum, results });
   } catch (err) {
     res.status(502).json({ error: `Search failed: ${err.message}` });
   }
