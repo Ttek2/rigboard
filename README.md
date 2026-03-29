@@ -84,9 +84,10 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 - OAuth-free: simple toggle to connect, no popups
 
 ### System & Monitoring
-- System stats widget (CPU per-core, RAM, disk, swap, load average, top host processes)
-- Full host monitoring from inside Docker (via mounted /proc, /sys, pid:host)
-- Network info widget (WAN IP, local IPs, DNS, gateway, ping latency)
+- System stats widget with real-time delta CPU calculation (updates every 5s)
+- Full host monitoring from inside Docker: CPU, RAM, disk, swap, load average, top processes
+- Network widget shows real host IPs, gateway, DNS, hostname (not container IPs)
+- Docker widget with container health badges, start/stop/restart via socket API
 - Notification center (maintenance overdue, service down, warranty expiring, AI insights, webhook alerts)
 - Incoming webhook receiver (Uptime Kuma, Grafana, GitHub, generic)
 - Prometheus metrics endpoint at `/metrics`
@@ -101,6 +102,8 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 
 ## Docker Compose
 
+**Full (recommended)** -- includes host monitoring, Docker control, and real network info:
+
 ```yaml
 services:
   rigboard:
@@ -110,13 +113,29 @@ services:
       - "0.0.0.0:3000:3000"
     volumes:
       - ./data:/app/data
-      - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker monitoring
-      - /proc:/host/proc:ro                            # Host system stats
-      - /sys:/host/sys:ro                              # Host system info
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker widget: container list, start/stop/restart
+      - /proc:/host/proc:ro                            # System widget: real CPU, RAM, disk, swap, processes
+      - /sys:/host/sys:ro                              # System widget: host hardware info
     environment:
       - TZ=Europe/Dublin
-      - HOST_PROC=/host/proc
-    pid: host  # See host processes in System widget
+      - HOST_PROC=/host/proc                           # Tell RigBoard where host /proc is mounted
+    pid: host                                          # System widget: see host processes, not container
+    restart: unless-stopped
+```
+
+**Minimal** -- no host monitoring, dashboard features only:
+
+```yaml
+services:
+  rigboard:
+    image: ghcr.io/ttek2/rigboard:latest
+    container_name: rigboard
+    ports:
+      - "0.0.0.0:3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Europe/Dublin
     restart: unless-stopped
 ```
 
