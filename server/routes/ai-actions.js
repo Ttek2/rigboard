@@ -119,6 +119,47 @@ const ACTIONS = {
       return { success: true, message: `Backup created: ${backupPath}` };
     }
   },
+  web_search: {
+    label: 'Web Search',
+    risk: 'low',
+    params: ['query'],
+    execute: async (db, params) => {
+      const searchProvider = db.prepare("SELECT value FROM settings WHERE key = 'search_provider'").get()?.value || 'duckduckgo';
+
+      let results;
+      if (searchProvider === 'brave') {
+        const apiKey = db.prepare("SELECT value FROM settings WHERE key = 'brave_search_api_key'").get()?.value;
+        if (!apiKey) return { success: false, message: 'Brave API key not configured' };
+        const res = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(params.query)}&count=5`, {
+          headers: { 'X-Subscription-Token': apiKey, Accept: 'application/json' },
+          signal: AbortSignal.timeout(10000),
+        });
+        const data = await res.json();
+        results = (data.web?.results || []).map(r => `${r.title}: ${r.description} (${r.url})`).join('\n');
+      } else if (searchProvider === 'searxng') {
+        const url = db.prepare("SELECT value FROM settings WHERE key = 'searxng_url'").get()?.value;
+        if (!url) return { success: false, message: 'SearXNG URL not configured' };
+        const res = await fetch(`${url.replace(/\/$/, '')}/search?q=${encodeURIComponent(params.query)}&format=json&categories=general`, {
+          signal: AbortSignal.timeout(10000),
+        });
+        const data = await res.json();
+        results = (data.results || []).slice(0, 5).map(r => `${r.title}: ${r.content} (${r.url})`).join('\n');
+      } else {
+        const res = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(params.query)}&format=json&no_html=1`, {
+          signal: AbortSignal.timeout(10000),
+        });
+        const data = await res.json();
+        const items = [];
+        if (data.AbstractText) items.push(`${data.Heading}: ${data.AbstractText} (${data.AbstractURL})`);
+        for (const r of (data.RelatedTopics || []).slice(0, 4)) {
+          if (r.Text) items.push(`${r.Text} (${r.FirstURL})`);
+        }
+        results = items.join('\n') || 'No results found.';
+      }
+
+      return { success: true, message: `Search results for "${params.query}":\n${results}` };
+    }
+  },
 };
 
 // POST /api/v1/ai/actions/execute — execute a confirmed action

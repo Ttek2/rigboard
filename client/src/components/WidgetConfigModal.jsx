@@ -17,8 +17,7 @@ const WIDGET_FIELDS = {
     { key: 'city', label: 'City', placeholder: 'Dublin' },
   ],
   websearch: [
-    { key: 'engine', label: 'Default engine (duckduckgo, google, searxng, bing, startpage, brave)', placeholder: 'duckduckgo' },
-    { key: 'searxng_url', label: 'SearXNG Instance URL (if using SearXNG)', placeholder: 'https://search.example.com' },
+    { key: 'engine', label: 'Default engine (duckduckgo, brave, searxng, google, bing, startpage)', placeholder: 'duckduckgo' },
   ],
   ai: [
     { key: 'include_context', label: 'Include dashboard context (true/false)', placeholder: 'true' },
@@ -74,6 +73,11 @@ const INTEGRATION_FIELDS = {
   homeassistant: [
     { key: 'ha_url', label: 'Home Assistant URL', placeholder: 'http://homeassistant.local:8123', icon: Link },
     { key: 'ha_token', label: 'Long-Lived Access Token', placeholder: 'eyJ...', icon: Key, password: true },
+  ],
+  websearch: [
+    { key: 'search_provider', label: 'Search API provider', placeholder: 'duckduckgo (no key), brave (key required), searxng (URL required)' },
+    { key: 'brave_search_api_key', label: 'Brave Search API Key', placeholder: 'BSA...', icon: Key, password: true },
+    { key: 'searxng_url', label: 'SearXNG Instance URL', placeholder: 'https://search.example.com', icon: Link },
   ],
   ai: [
     { key: 'ai_url', label: 'API Base URL', placeholder: 'https://api.openai.com (or http://localhost:11434 for Ollama)', icon: Link },

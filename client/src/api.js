@@ -160,6 +160,7 @@ export const getNetworkInfo = () => request('/integrations/network/info');
 export const getGithubReleases = (repos) => request(`/integrations/releases?repos=${encodeURIComponent(repos || '')}`);
 export const dockerAction = (name, action) => request(`/docker/containers/${name}/${action}`, { method: 'POST' });
 export const getDockerStats = () => request('/docker/stats');
+export const webSearch = (q, provider) => request(`/websearch?q=${encodeURIComponent(q)}${provider ? `&provider=${provider}` : ''}`);
 
 // Community Pulse
 export const getPulse = () => request('/integrations/pulse');
