@@ -275,6 +275,10 @@ You have persistent memory. To save something for future conversations, include 
 For example: [MEMORY:preferred_gpu_brand=NVIDIA] or [MEMORY:budget=500 EUR] or [MEMORY:location=Ireland]
 You can save multiple memories in one response. These persist across page refreshes and sessions.
 
+You can search the web. When you need current information beyond your context, include this tag in your response:
+[SEARCH:your search query here]
+The system will automatically search, feed results back to you, and you will then provide a synthesized answer. Do NOT show raw search results to the user. Instead, write [SEARCH:query], and the system will handle the rest. You will receive search results and should then summarize them naturally in your next message.
+
 ${require('./ai-actions').getActionPrompt(db)}`
   });
 
