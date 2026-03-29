@@ -55,14 +55,17 @@ function getDiskUsage() {
       const mountpoint = parts[1];
       const fstype = parts[2];
 
-      // Skip virtual/snap/loop
-      if (['squashfs', 'devtmpfs', 'tmpfs', 'overlay', 'fuse.snapfuse', 'efivarfs'].includes(fstype)) continue;
+      // Skip virtual/snap/loop/docker bind mounts
+      if (['squashfs', 'devtmpfs', 'tmpfs', 'overlay', 'fuse.snapfuse', 'efivarfs', 'nsfs', 'proc', 'sysfs'].includes(fstype)) continue;
       if (device.includes('/loop')) continue;
+      // Skip Docker's special bind-mounted files (resolv.conf, hostname, hosts)
+      if (mountpoint.includes('/etc/') || mountpoint.includes('/dev/') || mountpoint.includes('/proc/') || mountpoint.includes('/sys/')) continue;
+      // Only real filesystem mountpoints (start with / and are directories)
+      if (!mountpoint.startsWith('/') || mountpoint.includes('docker') || mountpoint.includes('containers')) continue;
 
-      // df on /host/root + mountpoint sees the real host filesystem
       const hostPath = mountpoint === '/' ? HOST_ROOT : `${HOST_ROOT}${mountpoint}`;
       try {
-        if (!fs.existsSync(hostPath)) continue;
+        if (!fs.existsSync(hostPath) || !fs.statSync(hostPath).isDirectory()) continue;
         const output = execSync(`df -B1 "${hostPath}" 2>/dev/null | tail -1`, { encoding: 'utf8', timeout: 2000 });
         const dfParts = output.trim().split(/\s+/);
         if (dfParts.length >= 6) {
@@ -158,7 +161,7 @@ function getTopProcesses() {
       }
     }
 
-    const noise = ['top ', 'ps ', 'head ', 'tail ', '/bin/sh -c', 'sh -c'];
+    const noise = ['top', 'ps ', 'head ', 'tail ', '/bin/sh -c', 'sh -c', 'kworker', 'pool_wo', 'kthreadd', 'rcu_'];
     const results = output.trim().split('\n')
       .filter(Boolean)
       .filter(line => !line.trim().startsWith('PID') && !line.trim().startsWith('USER') && !line.includes('%CPU') && !line.includes('COMMAND') && line.trim().length > 10)
