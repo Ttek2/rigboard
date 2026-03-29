@@ -281,6 +281,14 @@ export default function AIWidget({ config, onRemove, onConfigure }) {
                     {autonomy.mode || 'confirm'}
                   </strong>
                 </span>
+                {settings.ai_model && (
+                  <span className="flex items-center gap-1">
+                    <span style={{ color: settings.ai_url?.includes('localhost') || settings.ai_url?.includes('192.168') ? '#22c55e' : '#f59e0b' }}>
+                      {settings.ai_url?.includes('localhost') || settings.ai_url?.includes('192.168') || settings.ai_url?.includes('127.0.0.1') ? 'Local' : 'API'}
+                    </span>
+                    <strong style={{ color: 'var(--text-primary)' }}>{settings.ai_model}</strong>
+                  </span>
+                )}
               </div>
               <div className="flex flex-wrap gap-1 justify-center mt-2">
                 {(memoryCount === 0
