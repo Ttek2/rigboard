@@ -116,35 +116,39 @@ function getSwap() {
 
 function getTopProcesses() {
   try {
-    // With pid:host in compose, ps aux sees host processes
-    // Without it, try reading /host/proc directly
+    // Use top in batch mode for real-time CPU (not cumulative like ps)
     let output;
     try {
-      output = execSync("ps aux --sort=-%cpu 2>/dev/null | head -12 | tail -11", { encoding: 'utf8', timeout: 3000 });
+      output = execSync("top -b -n 1 -o %CPU 2>/dev/null | head -17 | tail -10", { encoding: 'utf8', timeout: 5000 });
     } catch {
+      // Fallback: ps (shows cumulative, but better than nothing)
       try {
-        output = execSync("ps -eo user,%cpu,%mem,comm --sort=-%cpu 2>/dev/null | head -12 | tail -11", { encoding: 'utf8', timeout: 3000 });
+        output = execSync("ps aux --sort=-%cpu 2>/dev/null | head -12 | tail -11", { encoding: 'utf8', timeout: 3000 });
       } catch {
         return [];
       }
     }
 
-    const noise = ['ps ', 'head ', 'tail ', '/bin/sh -c', 'sh -c'];
+    const noise = ['top ', 'ps ', 'head ', 'tail ', '/bin/sh -c', 'sh -c'];
     const results = output.trim().split('\n')
       .filter(Boolean)
-      .filter(line => !line.trim().startsWith('USER') && !line.includes('%CPU') && !line.includes('COMMAND'))
+      .filter(line => !line.trim().startsWith('PID') && !line.trim().startsWith('USER') && !line.includes('%CPU') && !line.includes('COMMAND') && line.trim().length > 10)
       .map(line => {
         const parts = line.trim().split(/\s+/);
+        // top format: PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND
+        if (parts.length >= 12) {
+          return { user: parts[1], cpu: parts[8], mem: parts[9], command: parts.slice(11).join(' ').slice(0, 50) };
+        }
+        // ps format: USER PID %CPU %MEM ... COMMAND
         if (parts.length >= 11) {
           return { user: parts[0], cpu: parts[2], mem: parts[3], command: parts.slice(10).join(' ').slice(0, 50) };
         }
-        return { user: parts[0], cpu: parts[1], mem: parts[2], command: parts.slice(3).join(' ').slice(0, 50) };
+        return null;
       })
-      .filter(p => !noise.some(n => p.command.startsWith(n)) && parseFloat(p.cpu) > 0)
+      .filter(p => p && !noise.some(n => p.command.startsWith(n)))
       .slice(0, 5);
 
-    // If we only got 1-2 results (container-only), note it
-    if (results.length <= 1) {
+    if (results.length === 0) {
       results.push({ user: '-', cpu: '-', mem: '-', command: 'Add pid:host to compose for host processes' });
     }
     return results;
