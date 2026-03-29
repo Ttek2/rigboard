@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
 import { Wrench, AlertTriangle, Clock, CheckCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { on } from '../../events';
 import WidgetWrapper from '../WidgetWrapper';
 import { getUpcomingMaintenance } from '../../api';
 
 export default function MaintenanceWidget({ config, onRemove, onConfigure }) {
   const [items, setItems] = useState([]);
 
+  const loadMaintenance = () => getUpcomingMaintenance().then(setItems).catch(console.error);
   useEffect(() => {
-    getUpcomingMaintenance().then(setItems).catch(console.error);
-    const interval = setInterval(() => {
-      getUpcomingMaintenance().then(setItems).catch(console.error);
-    }, 60000);
+    loadMaintenance();
+    const interval = setInterval(loadMaintenance, 60000);
     return () => clearInterval(interval);
   }, []);
+  useEffect(() => { const off = on('refresh:maintenance', loadMaintenance); const off2 = on('refresh:all', loadMaintenance); return () => { off(); off2(); }; }, []);
 
   return (
     <WidgetWrapper title="Maintenance" icon={Wrench} onRemove={onRemove} onConfigure={onConfigure}>

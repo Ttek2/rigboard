@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Container, Play, Square, RotateCw } from 'lucide-react';
 import WidgetWrapper from '../WidgetWrapper';
+import { on } from '../../events';
 import { getDockerContainers, dockerAction, getDockerStats } from '../../api';
 
 const STATE_COLORS = {
@@ -22,6 +23,7 @@ export default function DockerWidget({ config, onRemove, onConfigure }) {
     }).catch(() => {});
   };
   useEffect(() => { load(); const i = setInterval(load, 15000); return () => clearInterval(i); }, []);
+  useEffect(() => { const off = on('refresh:docker', load); const off2 = on('refresh:all', load); return () => { off(); off2(); }; }, []);
 
   const handleAction = async (name, action) => {
     setActing(`${name}-${action}`);

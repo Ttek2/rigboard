@@ -3,6 +3,7 @@ import { StickyNote, Plus, Trash2, Pin, Eye, Edit3, Search } from 'lucide-react'
 import { marked } from 'marked';
 import { formatDistanceToNow } from 'date-fns';
 import WidgetWrapper from '../WidgetWrapper';
+import { on } from '../../events';
 import { getNotes, createNote, updateNote, deleteNote } from '../../api';
 
 marked.setOptions({ breaks: true, gfm: true });
@@ -33,6 +34,7 @@ export default function NotesWidget({ config, onRemove, onConfigure }) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { const off = on('refresh:notes', load); const off2 = on('refresh:all', load); return () => { off(); off2(); }; }, [load]);
 
   const saveField = useCallback((id, field, value) => {
     clearTimeout(debounceRef.current);

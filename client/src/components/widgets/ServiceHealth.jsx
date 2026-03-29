@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Activity } from 'lucide-react';
 import WidgetWrapper from '../WidgetWrapper';
 import { getServiceStatus } from '../../api';
+import { on } from '../../events';
 
 const STATUS_COLORS = {
   online: '#22c55e',
@@ -35,13 +36,13 @@ function Sparkline({ checks }) {
 export default function ServiceHealth({ config, onRemove, onConfigure }) {
   const [services, setServices] = useState([]);
 
+  const loadServices = () => getServiceStatus().then(setServices).catch(console.error);
   useEffect(() => {
-    getServiceStatus().then(setServices).catch(console.error);
-    const interval = setInterval(() => {
-      getServiceStatus().then(setServices).catch(console.error);
-    }, 30000);
+    loadServices();
+    const interval = setInterval(loadServices, 30000);
     return () => clearInterval(interval);
   }, []);
+  useEffect(() => { const off = on('refresh:services', loadServices); const off2 = on('refresh:all', loadServices); return () => { off(); off2(); }; }, []);
 
   return (
     <WidgetWrapper title="Services" icon={Activity} onRemove={onRemove} onConfigure={onConfigure}>
