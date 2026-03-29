@@ -10,6 +10,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
+      - /:/host/root:ro
     environment:
       - TZ=${TZ:-Europe/Dublin}
       - NODE_ENV=production
