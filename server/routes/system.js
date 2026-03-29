@@ -4,14 +4,39 @@ const fs = require('fs');
 const { execSync } = require('child_process');
 const router = express.Router();
 
+// Track previous CPU snapshot for delta calculation
+let prevCpuTimes = null;
+
 function getCpuUsage() {
   const cpus = os.cpus();
   let totalIdle = 0, totalTick = 0;
-  for (const cpu of cpus) {
-    for (const type in cpu.times) totalTick += cpu.times[type];
-    totalIdle += cpu.times.idle;
+  const perCore = [];
+
+  for (let i = 0; i < cpus.length; i++) {
+    const cpu = cpus[i];
+    let idle = cpu.times.idle;
+    let total = 0;
+    for (const type in cpu.times) total += cpu.times[type];
+
+    if (prevCpuTimes && prevCpuTimes[i]) {
+      const idleDelta = idle - prevCpuTimes[i].idle;
+      const totalDelta = total - prevCpuTimes[i].total;
+      const usage = totalDelta > 0 ? Math.round((1 - idleDelta / totalDelta) * 100) : 0;
+      perCore.push({ core: i, usage });
+      totalIdle += idleDelta;
+      totalTick += totalDelta;
+    } else {
+      totalIdle += idle;
+      totalTick += total;
+      perCore.push({ core: i, usage: 0 });
+    }
+
+    if (!prevCpuTimes) prevCpuTimes = [];
+    prevCpuTimes[i] = { idle, total };
   }
-  return Math.round((1 - totalIdle / totalTick) * 100);
+
+  const overall = totalTick > 0 ? Math.round((1 - totalIdle / totalTick) * 100) : 0;
+  return { overall, perCore };
 }
 
 function getDiskUsage() {
@@ -135,16 +160,14 @@ router.get('/stats', (req, res) => {
   const uptime = os.uptime();
   const swap = getSwap();
   const cpus = os.cpus();
+  const cpuUsage = getCpuUsage();
 
   res.json({
     cpu: {
       model: cpus[0]?.model || 'Unknown',
       cores: cpus.length,
-      usage: getCpuUsage(),
-      per_core: cpus.map((c, i) => {
-        const total = Object.values(c.times).reduce((a, b) => a + b, 0);
-        return { core: i, usage: Math.round((1 - c.times.idle / total) * 100) };
-      })
+      usage: cpuUsage.overall,
+      per_core: cpuUsage.perCore,
     },
     load: getLoadAvg(),
     memory: {

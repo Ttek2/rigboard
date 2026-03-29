@@ -32,10 +32,9 @@ export default function SystemWidget({ config, onRemove, onConfigure }) {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    getSystemStats().then(setStats).catch(console.error);
-    const interval = setInterval(() => {
-      getSystemStats().then(setStats).catch(console.error);
-    }, 10000);
+    const load = () => getSystemStats().then(d => setStats({ ...d, _ts: Date.now() })).catch(console.error);
+    load();
+    const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
   }, []);
 
