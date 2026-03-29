@@ -279,8 +279,9 @@ if (fs.existsSync(publicDir)) {
 const { startFeedScheduler } = require('./services/feedParser');
 const { startHealthChecker } = require('./services/healthChecker');
 
-app.listen(PORT, () => {
-  console.log(`RigBoard server running on http://localhost:${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  console.log(`RigBoard server running on http://${HOST}:${PORT}`);
   console.log(`API docs at http://localhost:${PORT}/api/docs`);
   console.log(`Prometheus metrics at http://localhost:${PORT}/metrics`);
   startFeedScheduler(db);
