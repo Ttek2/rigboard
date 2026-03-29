@@ -61,8 +61,8 @@ const INTEGRATION_FIELDS = {
     { key: 'radarr_api_key', label: 'Radarr API Key', placeholder: 'Your Radarr API key', icon: Key, password: true, showIf: (cfg) => cfg.service === 'radarr' },
   ],
   pihole: [
-    { key: 'pihole_url', label: 'Pi-hole URL', placeholder: 'http://pihole', icon: Link },
-    { key: 'pihole_api_key', label: 'API Key (for toggle)', placeholder: 'Pi-hole web password', icon: Key, password: true },
+    { key: 'pihole_url', label: 'Pi-hole URL', placeholder: 'http://pihole or https://pihole.example.com', icon: Link },
+    { key: 'pihole_api_key', label: 'Web Password (v6) or API Token (v5)', placeholder: 'Your Pi-hole admin password', icon: Key, password: true },
   ],
   downloads: [
     { key: 'qbittorrent_url', label: 'qBittorrent URL', placeholder: 'http://qbittorrent:8080', icon: Link, showIf: (cfg) => (cfg.client || 'qbittorrent') === 'qbittorrent' },
