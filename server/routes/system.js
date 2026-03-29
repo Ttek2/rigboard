@@ -55,13 +55,14 @@ function getDiskUsage() {
       const mountpoint = parts[1];
       const fstype = parts[2];
 
-      // Skip virtual/snap/loop/docker bind mounts
-      if (['squashfs', 'devtmpfs', 'tmpfs', 'overlay', 'fuse.snapfuse', 'efivarfs', 'nsfs', 'proc', 'sysfs'].includes(fstype)) continue;
+      // Skip virtual/snap/loop filesystems
+      if (['squashfs', 'devtmpfs', 'tmpfs', 'overlay', 'fuse.snapfuse', 'efivarfs', 'nsfs', 'proc', 'sysfs', 'cgroup2', 'cgroup', 'autofs'].includes(fstype)) continue;
       if (device.includes('/loop')) continue;
-      // Skip Docker's special bind-mounted files (resolv.conf, hostname, hosts)
-      if (mountpoint.includes('/etc/') || mountpoint.includes('/dev/') || mountpoint.includes('/proc/') || mountpoint.includes('/sys/')) continue;
-      // Only real filesystem mountpoints (start with / and are directories)
-      if (!mountpoint.startsWith('/') || mountpoint.includes('docker') || mountpoint.includes('containers')) continue;
+      // Must be a real directory mountpoint, not a file bind mount
+      if (!mountpoint.startsWith('/')) continue;
+      // Skip Docker internal mounts
+      if (mountpoint.startsWith('/etc/') || mountpoint.startsWith('/dev/') || mountpoint.startsWith('/proc/') || mountpoint.startsWith('/sys/')) continue;
+      if (mountpoint.includes('/docker/') || mountpoint.includes('/containers/') || mountpoint.includes('/kubelet/')) continue;
 
       const hostPath = mountpoint === '/' ? HOST_ROOT : `${HOST_ROOT}${mountpoint}`;
       try {
@@ -148,36 +149,42 @@ function getSwap() {
 
 function getTopProcesses() {
   try {
-    // Use top in batch mode for real-time CPU (not cumulative like ps)
+    // Use top with wide output for full command names
     let output;
     try {
-      output = execSync("top -b -n 1 -o %CPU 2>/dev/null | head -17 | tail -10", { encoding: 'utf8', timeout: 5000 });
+      output = execSync("top -b -n 1 -w 200 -o %CPU 2>/dev/null | head -20 | tail -13", { encoding: 'utf8', timeout: 5000 });
     } catch {
-      // Fallback: ps (shows cumulative, but better than nothing)
       try {
-        output = execSync("ps aux --sort=-%cpu 2>/dev/null | head -12 | tail -11", { encoding: 'utf8', timeout: 3000 });
+        // Fallback: ps with wide output
+        output = execSync("ps aux --sort=-%cpu ww 2>/dev/null | head -15 | tail -14", { encoding: 'utf8', timeout: 3000 });
       } catch {
         return [];
       }
     }
 
-    const noise = ['top', 'ps ', 'head ', 'tail ', '/bin/sh -c', 'sh -c', 'kworker', 'pool_wo', 'kthreadd', 'rcu_'];
     const results = output.trim().split('\n')
-      .filter(Boolean)
-      .filter(line => !line.trim().startsWith('PID') && !line.trim().startsWith('USER') && !line.includes('%CPU') && !line.includes('COMMAND') && line.trim().length > 10)
+      .filter(line => line && !line.trim().startsWith('PID') && !line.trim().startsWith('USER') && line.trim().length > 5)
       .map(line => {
         const parts = line.trim().split(/\s+/);
-        // top format: PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND
+        // top format: PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND...
         if (parts.length >= 12) {
-          return { user: parts[1], cpu: parts[8], mem: parts[9], command: parts.slice(11).join(' ').slice(0, 50) };
+          return { user: parts[1], cpu: parts[8], mem: parts[9], command: parts.slice(11).join(' ') };
         }
-        // ps format: USER PID %CPU %MEM ... COMMAND
+        // ps format: USER PID %CPU %MEM ... COMMAND...
         if (parts.length >= 11) {
-          return { user: parts[0], cpu: parts[2], mem: parts[3], command: parts.slice(10).join(' ').slice(0, 50) };
+          return { user: parts[0], cpu: parts[2], mem: parts[3], command: parts.slice(10).join(' ') };
         }
         return null;
       })
-      .filter(p => p && !noise.some(n => p.command.startsWith(n)))
+      .filter(p => {
+        if (!p) return false;
+        const cmd = p.command.toLowerCase();
+        // Filter only our own monitoring commands
+        if (cmd === 'top' || cmd.startsWith('top ') || cmd.startsWith('ps ') || cmd.startsWith('head ') || cmd.startsWith('tail ')) return false;
+        if (cmd.startsWith('/bin/sh -c') || cmd.startsWith('sh -c')) return false;
+        return true;
+      })
+      .map(p => ({ ...p, command: p.command.slice(0, 60) })) // truncate for display
       .slice(0, 5);
 
     if (results.length === 0) {
