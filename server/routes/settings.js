@@ -77,4 +77,30 @@ router.post('/import', (req, res) => {
   res.json({ success: true });
 });
 
+// POST /api/v1/settings/wallpaper — upload wallpaper file
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const wallpaperStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(req.app.locals.DATA_DIR, 'uploads', 'wallpapers');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `wallpaper-${Date.now()}${ext}`);
+  }
+});
+const wallpaperUpload = multer({ storage: wallpaperStorage, limits: { fileSize: 20 * 1024 * 1024 } });
+
+router.post('/wallpaper', wallpaperUpload.single('wallpaper'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file' });
+  const url = `/uploads/wallpapers/${req.file.filename}`;
+  const db = req.app.locals.db;
+  db.prepare("INSERT INTO settings (key, value) VALUES ('wallpaper_url', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(url);
+  res.json({ ok: true, url });
+});
+
 module.exports = router;

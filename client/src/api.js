@@ -17,6 +17,7 @@ export const getSettings = () => request('/settings');
 export const updateSettings = (data) => request('/settings', { method: 'PUT', body: JSON.stringify(data) });
 export const exportConfig = () => request('/settings/export', { method: 'POST' });
 export const importConfig = (data) => request('/settings/import', { method: 'POST', body: JSON.stringify(data) });
+export const uploadWallpaper = (file) => { const fd = new FormData(); fd.append('wallpaper', file); return fetch(`${BASE}/settings/wallpaper`, { method: 'POST', body: fd }).then(r => r.json()); };
 
 // Widgets
 export const getWidgetLayout = () => request('/widgets/layout');
