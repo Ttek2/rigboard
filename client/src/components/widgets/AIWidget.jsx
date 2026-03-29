@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bot, Send, Trash2, Eye, Loader, HeartPulse, Brain } from 'lucide-react';
+import { Bot, Send, Trash2, Eye, Loader, HeartPulse, Brain, X } from 'lucide-react';
 import { marked } from 'marked';
 import WidgetWrapper from '../WidgetWrapper';
 import { streamAIChat, getAIContext, triggerHeartbeat, getAIHistory, saveAIMessage, clearAIHistory, extractMemories, getAIMemory, executeAIAction, getAIAutonomy } from '../../api';
@@ -291,11 +291,20 @@ export default function AIWidget({ config, onRemove, onConfigure }) {
               </button>
             )}
           </div>
-          <input value={input} onChange={e => setInput(e.target.value)}
-            placeholder="Ask anything..."
-            disabled={streaming}
-            className="flex-1 px-2.5 py-1.5 rounded-lg border text-xs"
-            style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+          <div className="flex-1 relative">
+            <input value={input} onChange={e => setInput(e.target.value)}
+              placeholder="Ask anything..."
+              disabled={streaming}
+              className="w-full px-2.5 py-1.5 pr-7 rounded-lg border text-xs"
+              style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+            {input && (
+              <button onClick={() => setInput('')}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded opacity-40 hover:opacity-100"
+                style={{ color: 'var(--text-secondary)' }}>
+                <X size={11} />
+              </button>
+            )}
+          </div>
           <button type="submit" disabled={streaming || !input.trim()}
             className="p-1.5 rounded-lg transition-colors"
             style={{ backgroundColor: 'var(--accent)', color: 'white', opacity: streaming || !input.trim() ? 0.5 : 1 }}>
