@@ -113,7 +113,7 @@ function App() {
   return (
     <SettingsContext.Provider value={{ settings, refreshSettings }}>
       <BrowserRouter>
-        <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <div className="min-h-screen" style={{ backgroundColor: settings.wallpaper_url ? 'transparent' : 'var(--bg-primary)' }}>
           <nav className="sticky top-0 z-50 border-b" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)' }}>
             <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
               <NavLink to="/" className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
