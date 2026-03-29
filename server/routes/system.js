@@ -41,59 +41,29 @@ function getCpuUsage() {
 
 function getDiskUsage() {
   const HOST_PROC = process.env.HOST_PROC || '/proc';
-  const HOST_ROOT = '/host/root';
   const disks = [];
 
+  // Method 1: Execute df on the host via docker exec on PID 1's namespace
   try {
-    // Read host's real mountpoints from /host/proc/mounts
-    const mounts = fs.readFileSync(`${HOST_PROC}/mounts`, 'utf8');
-
-    for (const line of mounts.split('\n')) {
-      if (!line.startsWith('/dev/')) continue;
-      const parts = line.split(' ');
-      const device = parts[0];
-      const mountpoint = parts[1];
-      const fstype = parts[2];
-
-      // Skip virtual/snap/loop filesystems
-      if (['squashfs', 'devtmpfs', 'tmpfs', 'overlay', 'fuse.snapfuse', 'efivarfs', 'nsfs', 'proc', 'sysfs', 'cgroup2', 'cgroup', 'autofs'].includes(fstype)) continue;
-      if (device.includes('/loop')) continue;
-      // Must be a real directory mountpoint, not a file bind mount
-      if (!mountpoint.startsWith('/')) continue;
-      // Skip Docker internal mounts
-      if (mountpoint.startsWith('/etc/') || mountpoint.startsWith('/dev/') || mountpoint.startsWith('/proc/') || mountpoint.startsWith('/sys/')) continue;
-      if (mountpoint.includes('/docker/') || mountpoint.includes('/containers/') || mountpoint.includes('/kubelet/')) continue;
-
-      const hostPath = mountpoint === '/' ? HOST_ROOT : `${HOST_ROOT}${mountpoint}`;
-      try {
-        if (!fs.existsSync(hostPath) || !fs.statSync(hostPath).isDirectory()) continue;
-        const output = execSync(`df -B1 "${hostPath}" 2>/dev/null | tail -1`, { encoding: 'utf8', timeout: 2000 });
-        const dfParts = output.trim().split(/\s+/);
-        if (dfParts.length >= 6) {
-          const total = parseInt(dfParts[1]) || 0;
-          const used = parseInt(dfParts[2]) || 0;
-          if (total > 500 * 1024 * 1024) { // > 500MB to skip boot partitions
-            disks.push({
-              device: device.split('/').pop(),
-              total, used, mountpoint, fstype,
-              percent: total > 0 ? Math.round((used / total) * 100) : 0
-            });
-          }
+    const output = execSync("nsenter -t 1 -m -u -n -- df -B1 -x tmpfs -x devtmpfs -x efivarfs -x squashfs 2>/dev/null", { encoding: 'utf8', timeout: 5000 });
+    for (const line of output.trim().split('\n').slice(1)) {
+      const parts = line.trim().split(/\s+/);
+      if (parts.length >= 6 && parts[0].startsWith('/dev/')) {
+        const total = parseInt(parts[1]) || 0;
+        const used = parseInt(parts[2]) || 0;
+        if (total > 500 * 1024 * 1024) {
+          disks.push({ device: parts[0].split('/').pop(), total, used, mountpoint: parts[5], percent: total > 0 ? Math.round((used / total) * 100) : 0 });
         }
-      } catch {}
+      }
+    }
+    if (disks.length > 0) {
+      const root = disks.find(d => d.mountpoint === '/') || disks[0];
+      return { total: root.total, used: root.used, percent: root.percent, disks };
     }
   } catch {}
 
-  // Deduplicate by device
-  const seen = new Set();
-  const uniqueDisks = disks.filter(d => {
-    if (seen.has(d.device)) return false;
-    seen.add(d.device);
-    return true;
-  }).sort((a, b) => b.total - a.total); // largest first
-
-  // Fallback if /host/root not mounted
-  if (uniqueDisks.length === 0) {
+  // Method 2: Fallback - regular df (only sees container's own mounts)
+  if (disks.length === 0) {
     try {
       const output = execSync("df -B1 / 2>/dev/null | tail -1", { encoding: 'utf8', timeout: 2000 });
       const parts = output.trim().split(/\s+/);
