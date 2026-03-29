@@ -246,6 +246,7 @@ app.use('/api/v1/integrations/releases', require('./routes/integrations/releases
 app.use('/api/v1/integrations/pulse', require('./routes/integrations/pulse'));
 app.use('/api/v1/ai', require('./routes/ai'));
 app.use('/api/v1/ai/actions', require('./routes/ai-actions'));
+app.use('/api/v1/websearch', require('./routes/websearch'));
 
 // Community (site key model, no OAuth)
 app.use('/api/v1/community', require('./routes/oauth')); // token, toggle, sites
