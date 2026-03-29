@@ -187,16 +187,12 @@ export default function useWidgetLayout(tabId, version = 0) {
   const [widgets, setWidgets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [cols, setCols] = useState(4);
-  const initialRenderRef = useRef(true);
 
   useEffect(() => {
     setLoading(true);
-    initialRenderRef.current = true;
     fetchLayout(tabId).then(w => {
       setWidgets(w.map(widget => ({ ...widget, widget_config: typeof widget.widget_config === 'string' ? JSON.parse(widget.widget_config) : widget.widget_config })));
       setLoading(false);
-      // Skip the first 2 onLayoutChange calls (react-grid-layout fires on mount + after first paint)
-      setTimeout(() => { initialRenderRef.current = false; }, 1000);
     }).catch(() => setLoading(false));
   }, [tabId, version]);
 
@@ -210,11 +206,13 @@ export default function useWidgetLayout(tabId, version = 0) {
     minH: WIDGET_DEFAULTS[w.widget_type]?.minH || 1,
   }));
 
+  // onLayoutChange only updates local state (for smooth dragging), does NOT save
   const onLayoutChange = useCallback((newLayout) => {
-    // Skip saves during initial render — react-grid-layout fires onLayoutChange
-    // on mount which would overwrite stored positions with recomputed ones
-    if (initialRenderRef.current) return;
+    // Do nothing — saving happens only on drag/resize stop
+  }, []);
 
+  // Called after user finishes dragging or resizing — this is the ONLY place we save
+  const onInteractionEnd = useCallback((newLayout) => {
     const updated = widgets.map((widget, i) => {
       const layoutItem = newLayout.find(l => l.i === String(widget.id || i));
       if (!layoutItem) return widget;
@@ -265,5 +263,5 @@ export default function useWidgetLayout(tabId, version = 0) {
     setWidgets(saved.map(w => ({ ...w, widget_config: typeof w.widget_config === 'string' ? JSON.parse(w.widget_config) : w.widget_config })));
   }, [widgets, tabId, cols]);
 
-  return { widgets, layout, loading, onLayoutChange, addWidget, removeWidget, autoArrange, setCols };
+  return { widgets, layout, loading, onLayoutChange, onInteractionEnd, addWidget, removeWidget, autoArrange, setCols };
 }
