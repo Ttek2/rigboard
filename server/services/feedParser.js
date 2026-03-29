@@ -1,13 +1,18 @@
 const RssParser = require('rss-parser');
 const cron = require('node-cron');
 
-const parser = new RssParser({
-  timeout: 10000,
-  headers: { 'User-Agent': 'RigBoard/1.0' }
-});
+const parser = new RssParser();
 
 async function fetchFeed(url) {
-  return await parser.parseURL(url);
+  // Use fetch + parseString to avoid rss-parser's HTTP client being blocked (e.g. Reddit)
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RigBoard/1.0; +https://github.com/Ttek2/rigboard)' },
+    signal: AbortSignal.timeout(15000),
+    redirect: 'follow',
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const xml = await res.text();
+  return await parser.parseString(xml);
 }
 
 function startFeedScheduler(db) {
