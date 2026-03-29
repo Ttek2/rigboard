@@ -116,8 +116,9 @@ services:
     volumes:
       - ./data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker widget: container list, start/stop/restart
-      - /proc:/host/proc:ro                            # System widget: real CPU, RAM, disk, swap, processes
+      - /proc:/host/proc:ro                            # System widget: real CPU, RAM, swap, processes
       - /sys:/host/sys:ro                              # System widget: host hardware info
+      - /:/host/root:ro                                # System widget: detect all host disks
     environment:
       - TZ=Europe/Dublin
       - HOST_PROC=/host/proc                           # Tell RigBoard where host /proc is mounted
