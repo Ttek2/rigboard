@@ -29,6 +29,10 @@ import NetworkWidget from '../components/widgets/NetworkWidget';
 import ReleasesWidget from '../components/widgets/ReleasesWidget';
 import PulseWidget from '../components/widgets/PulseWidget';
 import YouTubeWidget from '../components/widgets/YouTubeWidget';
+import StickyNoteWidget from '../components/widgets/StickyNoteWidget';
+import ClockWidget from '../components/widgets/ClockWidget';
+import SpeedtestWidget from '../components/widgets/SpeedtestWidget';
+import GpuWidget from '../components/widgets/GpuWidget';
 import WidgetConfigModal from '../components/WidgetConfigModal';
 import { WIDGET_HELP_MAP } from './HelpPage';
 import { WidgetHelpContext } from '../components/WidgetWrapper';
@@ -58,6 +62,10 @@ const WIDGET_TYPES = {
   ai: { label: 'AI Assistant', component: AIWidget },
   community: { label: 'Community', component: CommunityWidget },
   youtube: { label: 'YouTube', component: YouTubeWidget },
+  stickynote: { label: 'Sticky Note', component: StickyNoteWidget },
+  clock: { label: 'Clock / Timezone', component: ClockWidget },
+  speedtest: { label: 'Speed Test', component: SpeedtestWidget },
+  gpu: { label: 'GPU Monitor', component: GpuWidget },
 };
 
 export default function DashboardPage() {

@@ -3,6 +3,9 @@ const router = express.Router();
 
 // Build a comprehensive dashboard context summary
 // Always includes section headers even when empty so AI knows what widgets exist
+// Use shared context builder (also used by Telegram bot)
+const { buildContext: _sharedBuildContext, buildMemoryContext: _sharedBuildMemoryContext } = require('../services/aiContext');
+
 function buildContext(db) {
   const parts = [];
 

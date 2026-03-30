@@ -30,6 +30,10 @@ const WIDGET_DEFAULTS = {
   ai: { grid_w: 2, grid_h: 8, minW: 1, minH: 4 },
   community: { grid_w: 2, grid_h: 8, minW: 1, minH: 4 },
   youtube: { grid_w: 1, grid_h: 10, minW: 1, minH: 4 },
+  stickynote: { grid_w: 1, grid_h: 5, minW: 1, minH: 3 },
+  clock: { grid_w: 1, grid_h: 4, minW: 1, minH: 2 },
+  speedtest: { grid_w: 1, grid_h: 6, minW: 1, minH: 4 },
+  gpu: { grid_w: 1, grid_h: 7, minW: 1, minH: 4 },
 };
 
 async function fetchLayout(tabId) {

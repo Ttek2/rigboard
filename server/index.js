@@ -277,6 +277,7 @@ app.use('/api/v1/share', require('./routes/share'));
 app.use('/api/v1/articles', require('./routes/articles'));
 app.use('/api/v1/prices', require('./routes/prices'));
 app.use('/api/v1/homeassistant', require('./routes/homeassistant'));
+app.use('/api/v1/gpu', require('./routes/gpu'));
 
 // Integration routes
 app.use('/api/v1/integrations/jellyseerr', require('./routes/integrations/jellyseerr'));
@@ -288,6 +289,11 @@ app.use('/api/v1/integrations/network', require('./routes/integrations/network')
 app.use('/api/v1/integrations/youtube', require('./routes/integrations/youtube'));
 app.use('/api/v1/integrations/releases', require('./routes/integrations/releases'));
 app.use('/api/v1/integrations/pulse', require('./routes/integrations/pulse'));
+app.use('/api/v1/version', require('./routes/version'));
+app.use('/api/v1/security', require('./routes/security'));
+app.use('/api/v1/gpu', require('./routes/gpu'));
+app.use('/api/v1/speedtest', require('./routes/speedtest'));
+app.use('/api/v1/telegram', require('./routes/telegram'));
 app.use('/api/v1/ai', require('./routes/ai'));
 app.use('/api/v1/ai/actions', require('./routes/ai-actions'));
 app.use('/api/v1/websearch', require('./routes/websearch'));
@@ -325,6 +331,7 @@ if (fs.existsSync(publicDir)) {
 // Start services
 const { startFeedScheduler } = require('./services/feedParser');
 const { startHealthChecker } = require('./services/healthChecker');
+const { startTelegramBot } = require('./services/telegramBot');
 
 const HOST = process.env.HOST || '0.0.0.0';
 app.listen(PORT, HOST, () => {
@@ -333,6 +340,7 @@ app.listen(PORT, HOST, () => {
   console.log(`Prometheus metrics at http://localhost:${PORT}/metrics`);
   startFeedScheduler(db);
   startHealthChecker(db, sseRouter.broadcast);
+  startTelegramBot(db);
 });
 
 process.on('SIGINT', () => { db.close(); process.exit(0); });
