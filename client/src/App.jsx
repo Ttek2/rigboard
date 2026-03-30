@@ -25,25 +25,28 @@ function App() {
   const [authChecked, setAuthChecked] = useState(false);
 
   const applyAppTheme = (s) => {
-    // Apply color theme + overrides
-    let overrides = {};
-    try { overrides = JSON.parse(s.color_overrides || '{}'); } catch {}
-    applyThemePreset(s.theme || 'dark', overrides);
+    if (!s || typeof s !== 'object') return;
+    try {
+      // Apply color theme + overrides
+      let overrides = {};
+      try { overrides = JSON.parse(s.color_overrides || '{}'); } catch {}
+      applyThemePreset(s.theme || 'dark', overrides);
 
-    // Apply visual style layers
-    try { applyStyle(JSON.parse(s.visual_styles || '[]')); } catch { applyStyle([]); }
+      // Apply visual style layers
+      try { applyStyle(JSON.parse(s.visual_styles || '[]')); } catch { applyStyle([]); }
 
-    // Apply font size
-    if (s.font_size) document.documentElement.style.setProperty('--font-size', s.font_size + 'px');
+      // Apply font size
+      if (s.font_size) document.documentElement.style.setProperty('--font-size', s.font_size + 'px');
 
-    // Wallpaper is handled by a real <img> element in the render
-
-    // Apply custom CSS
-    let styleEl = document.getElementById('rigboard-custom-css');
-    if (s.custom_css) {
-      if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'rigboard-custom-css'; document.head.appendChild(styleEl); }
-      styleEl.textContent = s.custom_css;
-    } else if (styleEl) { styleEl.remove(); }
+      // Apply custom CSS
+      let styleEl = document.getElementById('rigboard-custom-css');
+      if (s.custom_css) {
+        if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'rigboard-custom-css'; document.head.appendChild(styleEl); }
+        styleEl.textContent = s.custom_css;
+      } else if (styleEl) { styleEl.remove(); }
+    } catch (err) {
+      console.error('Theme apply error:', err);
+    }
   };
 
   useEffect(() => {
