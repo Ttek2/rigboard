@@ -36,13 +36,16 @@ router.post('/export', (req, res) => {
   const rigs = db.prepare('SELECT * FROM rigs').all();
   const tabs = db.prepare('SELECT * FROM dashboard_tabs').all();
   const components = db.prepare('SELECT * FROM components').all();
-  res.json({ settings, bookmarks, feeds, widgets, services, rigs, tabs, components });
+  const notes = db.prepare('SELECT * FROM notes').all();
+  const maintenanceLogs = db.prepare('SELECT * FROM maintenance_logs').all();
+  const maintenanceSchedules = db.prepare('SELECT * FROM maintenance_schedules').all();
+  res.json({ settings, bookmarks, feeds, widgets, services, rigs, tabs, components, notes, maintenance_logs: maintenanceLogs, maintenance_schedules: maintenanceSchedules });
 });
 
 // POST /api/v1/settings/import
 router.post('/import', (req, res) => {
   const db = req.app.locals.db;
-  const { settings, bookmarks, feeds, widgets, services, rigs, tabs, components } = req.body;
+  const { settings, bookmarks, feeds, widgets, services, rigs, tabs, components, notes, maintenance_logs, maintenance_schedules } = req.body;
 
   const transaction = db.transaction(() => {
     if (settings) {
@@ -114,6 +117,27 @@ router.post('/import', (req, res) => {
       const insert = db.prepare('INSERT INTO components (id, rig_id, parent_component_id, category, name, model, serial_number, purchase_date, purchase_price, currency, warranty_expires, notes, image_path, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
       for (const c of components) {
         insert.run(c.id, c.rig_id, c.parent_component_id, c.category, c.name, c.model, c.serial_number, c.purchase_date, c.purchase_price, c.currency, c.warranty_expires, c.notes, c.image_path, c.sort_order);
+      }
+    }
+    if (notes) {
+      db.prepare('DELETE FROM notes').run();
+      const insert = db.prepare('INSERT INTO notes (id, title, content, is_pinned, updated_at, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+      for (const n of notes) {
+        insert.run(n.id, n.title, n.content, n.is_pinned, n.updated_at, n.created_at);
+      }
+    }
+    if (maintenance_logs) {
+      db.prepare('DELETE FROM maintenance_logs').run();
+      const insert = db.prepare('INSERT INTO maintenance_logs (id, component_id, action, notes, performed_at) VALUES (?, ?, ?, ?, ?)');
+      for (const m of maintenance_logs) {
+        insert.run(m.id, m.component_id, m.action, m.notes, m.performed_at);
+      }
+    }
+    if (maintenance_schedules) {
+      db.prepare('DELETE FROM maintenance_schedules').run();
+      const insert = db.prepare('INSERT INTO maintenance_schedules (id, component_id, task_name, interval_days, last_performed, next_due, webhook_url) VALUES (?, ?, ?, ?, ?, ?, ?)');
+      for (const m of maintenance_schedules) {
+        insert.run(m.id, m.component_id, m.task_name, m.interval_days, m.last_performed, m.next_due, m.webhook_url);
       }
     }
   });
