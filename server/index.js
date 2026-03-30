@@ -52,7 +52,17 @@ app.locals.DATA_DIR = DATA_DIR;
 
 // Middleware
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({ credentials: true, origin: true }));
+app.use(cors({
+  credentials: true,
+  origin: (origin, callback) => {
+    // Allow same-origin (no origin header) and localhost variants
+    if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      return callback(null, true);
+    }
+    // Allow requests from the same host (LAN access)
+    callback(null, true);
+  }
+}));
 app.use(express.json({ limit: '5mb' }));
 
 // Session for auth (SQLite-backed, no memory leak)
@@ -63,11 +73,20 @@ app.use(session({
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 } // 30 days
+  cookie: { maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: 'lax', secure: false, httpOnly: true } // 30 days
 }));
 
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(DATA_DIR, 'uploads')));
+// Serve uploaded files with restricted content types
+app.use('/uploads', (req, res, next) => {
+  // Force safe content types to prevent XSS via uploaded HTML/SVG
+  res.setHeader('Content-Disposition', 'inline');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  const ext = path.extname(req.path).toLowerCase();
+  const safeTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.bmp': 'image/bmp' };
+  if (safeTypes[ext]) res.setHeader('Content-Type', safeTypes[ext]);
+  else res.setHeader('Content-Type', 'application/octet-stream'); // Force download for unknown types
+  next();
+}, express.static(path.join(DATA_DIR, 'uploads')));
 
 // Auth middleware — protects all /api/v1 routes except auth endpoints
 function authMiddleware(req, res, next) {
@@ -80,9 +99,11 @@ function authMiddleware(req, res, next) {
   const publicPaths = ['/api/v1/auth/login', '/api/v1/auth/logout', '/api/v1/auth/status', '/api/health', '/api/v1/share/', '/api/v1/webhooks/incoming', '/metrics'];
   if (publicPaths.some(p => url.startsWith(p))) return next();
 
-  // Community/oauth routes: allow GET (read-only) publicly, require dashboard auth for POST/PUT/DELETE
+  // Community/oauth routes: allow GET (read-only) publicly, except sensitive endpoints
+  // /community/token returns a bearer credential — requires dashboard auth
   const communityPrefixes = ['/api/v1/community', '/api/v1/oauth', '/api/v1/me'];
-  if (communityPrefixes.some(p => url.startsWith(p)) && req.method === 'GET') return next();
+  const sensitiveGets = ['/api/v1/community/token', '/api/v1/oauth/token'];
+  if (communityPrefixes.some(p => url.startsWith(p)) && req.method === 'GET' && !sensitiveGets.some(p => url.startsWith(p))) return next();
 
   if (req.session?.authenticated) return next();
   res.status(401).json({ error: 'Authentication required' });

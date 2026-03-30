@@ -16,7 +16,12 @@ const storage = multer.diskStorage({
     cb(null, `rig-${Date.now()}${ext}`);
   }
 });
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+const ALLOWED_IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+const imageFileFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  cb(null, ALLOWED_IMAGE_EXTS.includes(ext));
+};
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 }, fileFilter: imageFileFilter });
 
 // GET /api/v1/rigs
 router.get('/', (req, res) => {
