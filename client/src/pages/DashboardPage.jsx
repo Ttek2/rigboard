@@ -80,7 +80,8 @@ export default function DashboardPage() {
 
   const currentTab = tabs.find(t => t.id === activeTab);
   const cols = currentTab?.cols || 4;
-  const { widgets, layout, loading, onLayoutChange, onInteractionEnd, addWidget, removeWidget, autoArrange, setCols } = useWidgetLayout(activeTab, layoutVersion);
+  // Only fetch widgets after tabs have loaded and activeTab is set, to avoid a flash-then-empty cycle
+  const { widgets, layout, loading, onLayoutChange, onInteractionEnd, addWidget, removeWidget, autoArrange, setCols } = useWidgetLayout(tabsLoaded ? activeTab : '__skip__', layoutVersion);
 
   // Keep the hook's col count in sync — but only after tabs have loaded
   useEffect(() => { if (tabsLoaded) setCols(cols); }, [cols, setCols, tabsLoaded]);
