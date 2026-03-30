@@ -55,12 +55,24 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
   credentials: true,
   origin: (origin, callback) => {
-    // Allow same-origin (no origin header) and localhost variants
-    if (!origin || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+    // No origin header = same-origin request (browser doesn't send Origin for same-origin)
+    if (!origin) return callback(null, true);
+    // Allow localhost
+    if (origin.startsWith('http://localhost') || origin.startsWith('https://localhost') ||
+        origin.startsWith('http://127.0.0.1') || origin.startsWith('https://127.0.0.1')) {
       return callback(null, true);
     }
-    // Allow requests from the same host (LAN access)
-    callback(null, true);
+    // Allow private/LAN IPs (RFC 1918 + link-local)
+    const hostMatch = origin.match(/^https?:\/\/([\d.]+)/);
+    if (hostMatch) {
+      const ip = hostMatch[1];
+      if (ip.startsWith('10.') || ip.startsWith('192.168.') ||
+          ip.match(/^172\.(1[6-9]|2\d|3[01])\./) || ip.startsWith('169.254.')) {
+        return callback(null, true);
+      }
+    }
+    // Reject other origins
+    callback(new Error('CORS not allowed'), false);
   }
 }));
 app.use(express.json({ limit: '5mb' }));

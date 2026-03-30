@@ -189,7 +189,9 @@ services:
 > **What needs what?**
 > - **Minimal**: feeds, rigs, AI, YouTube, Community Pulse, bookmarks, notes, all third-party integrations
 > - **Standard** adds: CPU, RAM, swap, load, uptime, GPU monitoring (read-only, no elevated privileges)
-> - **Homelab** adds: Docker start/stop/restart, host processes, all disk detection, real host IPs/hostname
+> - **Homelab** adds: Docker start/stop/restart, host processes, all disk detection, real host IPs/hostname/gateway
+>
+> The Network widget works best with `pid: host` (Homelab profile) for accurate host IP and interface detection. Without it, network info may show container-level data.
 
 ## Development
 
