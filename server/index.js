@@ -74,8 +74,8 @@ function authMiddleware(req, res, next) {
   const authEnabled = db.prepare("SELECT value FROM settings WHERE key = 'auth_enabled'").get();
   if (!authEnabled || authEnabled.value !== 'true') return next();
 
-  // Allow auth routes, health check, shared rigs, webhook receiver, and prometheus metrics
-  const publicPaths = ['/api/v1/auth', '/api/health', '/api/v1/share/', '/api/v1/webhooks/incoming', '/metrics', '/api/v1/oauth', '/api/v1/community', '/api/v1/me'];
+  // Allow only specific auth routes (login, logout, status), health check, shared rigs, webhook receiver, and prometheus metrics
+  const publicPaths = ['/api/v1/auth/login', '/api/v1/auth/logout', '/api/v1/auth/status', '/api/health', '/api/v1/share/', '/api/v1/webhooks/incoming', '/metrics', '/api/v1/oauth', '/api/v1/community', '/api/v1/me'];
   if (publicPaths.some(p => req.path.startsWith(p))) return next();
 
   if (req.session?.authenticated) return next();
@@ -127,6 +127,13 @@ app.get('/api/v1/auth/status', (req, res) => {
 });
 
 app.post('/api/v1/auth/setup', (req, res) => {
+  // After first-run (password already set), require authentication to change auth settings
+  const existingPassword = db.prepare("SELECT value FROM settings WHERE key = 'auth_password'").get();
+  const authEnabled = db.prepare("SELECT value FROM settings WHERE key = 'auth_enabled'").get();
+  if (existingPassword && authEnabled?.value === 'true' && !req.session?.authenticated) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
   const { password, enable } = req.body;
   if (password) {
     const hash = crypto.createHash('sha256').update(password).digest('hex');
@@ -137,8 +144,17 @@ app.post('/api/v1/auth/setup', (req, res) => {
   res.json({ success: true });
 });
 
+// TOTP routes require authentication
+function requireAuth(req, res, next) {
+  const authEnabled = db.prepare("SELECT value FROM settings WHERE key = 'auth_enabled'").get();
+  if (authEnabled?.value === 'true' && !req.session?.authenticated) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  next();
+}
+
 // TOTP setup — generate secret and QR code
-app.post('/api/v1/auth/totp/setup', async (req, res) => {
+app.post('/api/v1/auth/totp/setup', requireAuth, async (req, res) => {
   const secret = new Secret();
   const totp = new TOTP({
     issuer: 'RigBoard',
@@ -155,7 +171,7 @@ app.post('/api/v1/auth/totp/setup', async (req, res) => {
 });
 
 // TOTP verify — confirm the code works, then enable
-app.post('/api/v1/auth/totp/verify', (req, res) => {
+app.post('/api/v1/auth/totp/verify', requireAuth, (req, res) => {
   const { code } = req.body;
   const pendingSecret = db.prepare("SELECT value FROM settings WHERE key = 'totp_secret_pending'").get()?.value;
   if (!pendingSecret) return res.status(400).json({ error: 'No pending TOTP setup' });
@@ -174,7 +190,7 @@ app.post('/api/v1/auth/totp/verify', (req, res) => {
 });
 
 // TOTP disable
-app.post('/api/v1/auth/totp/disable', (req, res) => {
+app.post('/api/v1/auth/totp/disable', requireAuth, (req, res) => {
   db.prepare("INSERT INTO settings (key, value) VALUES ('totp_enabled', 'false') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run();
   db.prepare("DELETE FROM settings WHERE key = 'totp_secret'").run();
   db.prepare("DELETE FROM settings WHERE key = 'totp_secret_pending'").run();
