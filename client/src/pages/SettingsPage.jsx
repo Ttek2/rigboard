@@ -64,7 +64,16 @@ export default function SettingsPage() {
 
   const handleImport = () => {
     const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
-    input.onchange = async (e) => { const text = await e.target.files[0].text(); await importConfig(JSON.parse(text)); refreshSettings(); };
+    input.onchange = async (e) => {
+      try {
+        const text = await e.target.files[0].text();
+        await importConfig(JSON.parse(text));
+        // Full page reload to cleanly reinitialize all state after import
+        window.location.href = '/';
+      } catch (err) {
+        alert('Import failed: ' + err.message);
+      }
+    };
     input.click();
   };
 
