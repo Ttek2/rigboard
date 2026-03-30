@@ -5,6 +5,17 @@ const router = express.Router();
 router.get('/layout', (req, res) => {
   const db = req.app.locals.db;
   const tabId = req.query.tab_id;
+
+  // Auto-repair: adopt orphaned widgets (tab_id references non-existent tab)
+  const existingTabIds = db.prepare('SELECT id FROM dashboard_tabs').all().map(t => t.id);
+  if (existingTabIds.length > 0) {
+    const defaultTabId = existingTabIds[0];
+    const orphans = db.prepare('SELECT id FROM widget_layout WHERE tab_id IS NULL OR tab_id NOT IN (SELECT id FROM dashboard_tabs)').all();
+    if (orphans.length > 0) {
+      db.prepare('UPDATE widget_layout SET tab_id = ? WHERE tab_id IS NULL OR tab_id NOT IN (SELECT id FROM dashboard_tabs)').run(defaultTabId);
+    }
+  }
+
   let widgets;
   if (tabId) {
     widgets = db.prepare('SELECT * FROM widget_layout WHERE tab_id = ? ORDER BY grid_y, grid_x').all(tabId);

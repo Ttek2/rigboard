@@ -189,6 +189,7 @@ export default function useWidgetLayout(tabId, version = 0) {
   const [cols, setCols] = useState(4);
 
   useEffect(() => {
+    if (tabId === '__skip__') return; // Wait for tabs to load
     setLoading(true);
     fetchLayout(tabId).then(w => {
       setWidgets(w.map(widget => ({ ...widget, widget_config: typeof widget.widget_config === 'string' ? JSON.parse(widget.widget_config) : widget.widget_config })));
