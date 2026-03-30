@@ -254,13 +254,12 @@ export default function useWidgetLayout(tabId, version = 0) {
     setWidgets(saved.map(w => ({ ...w, widget_config: typeof w.widget_config === 'string' ? JSON.parse(w.widget_config) : w.widget_config })));
   }, [widgets, tabId, cols]);
 
-  // Remove + auto-repack with stretch to fill
+  // Remove widget — preserve existing positions, no repack
   const removeWidget = useCallback(async (index) => {
     const remaining = widgets.filter((_, i) => i !== index);
-    const repacked = masonryPack(remaining, cols, true);
-    const saved = await saveWidgetLayout(repacked.map(w => ({ ...w, tab_id: tabId || w.tab_id })));
+    const saved = await saveWidgetLayout(remaining.map(w => ({ ...w, tab_id: tabId || w.tab_id })));
     setWidgets(saved.map(w => ({ ...w, widget_config: typeof w.widget_config === 'string' ? JSON.parse(w.widget_config) : w.widget_config })));
-  }, [widgets, tabId, cols]);
+  }, [widgets, tabId]);
 
   // Full repack + stretch to fill every gap
   const autoArrange = useCallback(async () => {
