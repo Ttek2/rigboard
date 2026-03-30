@@ -34,19 +34,28 @@ router.post('/export', (req, res) => {
   const widgets = db.prepare('SELECT * FROM widget_layout').all();
   const services = db.prepare('SELECT * FROM services').all();
   const rigs = db.prepare('SELECT * FROM rigs').all();
-  res.json({ settings, bookmarks, feeds, widgets, services, rigs });
+  const tabs = db.prepare('SELECT * FROM dashboard_tabs').all();
+  const components = db.prepare('SELECT * FROM components').all();
+  res.json({ settings, bookmarks, feeds, widgets, services, rigs, tabs, components });
 });
 
 // POST /api/v1/settings/import
 router.post('/import', (req, res) => {
   const db = req.app.locals.db;
-  const { settings, bookmarks, feeds, widgets } = req.body;
+  const { settings, bookmarks, feeds, widgets, services, rigs, tabs, components } = req.body;
 
   const transaction = db.transaction(() => {
     if (settings) {
       const upsert = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
       for (const s of settings) {
         upsert.run(s.key, s.value);
+      }
+    }
+    if (tabs) {
+      db.prepare('DELETE FROM dashboard_tabs').run();
+      const insert = db.prepare('INSERT INTO dashboard_tabs (id, name, sort_order, is_default, cols) VALUES (?, ?, ?, ?, ?)');
+      for (const t of tabs) {
+        insert.run(t.id, t.name, t.sort_order, t.is_default, t.cols);
       }
     }
     if (bookmarks) {
@@ -66,9 +75,37 @@ router.post('/import', (req, res) => {
     }
     if (widgets) {
       db.prepare('DELETE FROM widget_layout').run();
-      const insert = db.prepare('INSERT INTO widget_layout (widget_type, widget_config, grid_x, grid_y, grid_w, grid_h, is_visible) VALUES (?, ?, ?, ?, ?, ?, ?)');
+      // Ensure a default tab exists if widgets reference tab_id but no tabs were imported
+      const tabExists = db.prepare('SELECT COUNT(*) as c FROM dashboard_tabs').get().c;
+      if (!tabExists) {
+        db.prepare('INSERT INTO dashboard_tabs (id, name, sort_order, is_default, cols) VALUES (1, ?, 0, 1, 5)').run('Dashboard');
+      }
+      const insert = db.prepare('INSERT INTO widget_layout (widget_type, widget_config, grid_x, grid_y, grid_w, grid_h, is_visible, tab_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
       for (const w of widgets) {
-        insert.run(w.widget_type, w.widget_config, w.grid_x, w.grid_y, w.grid_w, w.grid_h, w.is_visible);
+        const tabId = w.tab_id || 1;
+        insert.run(w.widget_type, w.widget_config, w.grid_x, w.grid_y, w.grid_w, w.grid_h, w.is_visible, tabId);
+      }
+    }
+    if (services) {
+      db.prepare('DELETE FROM services').run();
+      const insert = db.prepare('INSERT INTO services (name, url, icon, group_name, check_interval_seconds, is_enabled) VALUES (?, ?, ?, ?, ?, ?)');
+      for (const s of services) {
+        insert.run(s.name, s.url, s.icon, s.group_name, s.check_interval_seconds, s.is_enabled);
+      }
+    }
+    if (rigs) {
+      if (!components) db.prepare('DELETE FROM components').run();
+      db.prepare('DELETE FROM rigs').run();
+      const insert = db.prepare('INSERT INTO rigs (id, name, description, image_path, sort_order) VALUES (?, ?, ?, ?, ?)');
+      for (const r of rigs) {
+        insert.run(r.id, r.name, r.description, r.image_path, r.sort_order);
+      }
+    }
+    if (components) {
+      db.prepare('DELETE FROM components').run();
+      const insert = db.prepare('INSERT INTO components (id, rig_id, parent_component_id, category, name, model, serial_number, purchase_date, purchase_price, currency, warranty_expires, notes, image_path, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      for (const c of components) {
+        insert.run(c.id, c.rig_id, c.parent_component_id, c.category, c.name, c.model, c.serial_number, c.purchase_date, c.purchase_price, c.currency, c.warranty_expires, c.notes, c.image_path, c.sort_order);
       }
     }
   });
