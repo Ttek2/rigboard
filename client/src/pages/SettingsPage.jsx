@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
-import { Sun, Moon, Download, Upload, Plus, Trash2, Activity, Database, Rss, Lock, Palette, Globe, Code, Check, Users, RefreshCw } from 'lucide-react';
+import { Sun, Moon, Download, Upload, Plus, Trash2, Activity, Database, Rss, Lock, Palette, Globe, Code, Check, Users, RefreshCw, Send } from 'lucide-react';
 import { SettingsContext } from '../App';
-import { updateSettings, exportConfig, importConfig, getServices, createService, deleteService, exportOPML, importOPML, createBackup, getAuthStatus, setupAuth, setupTOTP, verifyTOTP, disableTOTP, toggleCommunity, registerSite, getSettings as fetchSettings, uploadWallpaper, refreshAllFeeds } from '../api';
+import { updateSettings, exportConfig, importConfig, getServices, createService, deleteService, exportOPML, importOPML, createBackup, getAuthStatus, setupAuth, setupTOTP, verifyTOTP, disableTOTP, toggleCommunity, registerSite, getSettings as fetchSettings, uploadWallpaper, refreshAllFeeds, getTelegramStatus, testTelegram, updateTelegramSettings } from '../api';
 import { THEMES, applyTheme, getThemeGroups } from '../themes';
 import { STYLES, applyStyle, getStyleGroups } from '../styles';
 
@@ -487,22 +487,25 @@ export default function SettingsPage() {
 
         {/* API & INTEGRATIONS TAB */}
         {activeTab === 'api' && (
-          <Card title="API & Integrations">
-            <div className="space-y-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
-              <p>API docs: <a href="/api/docs" target="_blank" className="underline" style={{ color: 'var(--accent)' }}>/api/docs</a> (Swagger UI)</p>
-              <p>Prometheus metrics: <a href="/metrics" target="_blank" className="underline" style={{ color: 'var(--accent)' }}>/metrics</a></p>
-              <div className="border-t pt-3 mt-3" style={{ borderColor: 'var(--border)' }}>
-                <p className="font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Webhooks</p>
-                <p>Endpoint: <code className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-primary)' }}>POST /api/v1/webhooks/incoming</code></p>
-                <p className="text-xs mt-1">Supports Uptime Kuma, Grafana, GitHub. Add <code>?source=myapp</code> or <code>X-Webhook-Source</code> header.</p>
+          <>
+            <TelegramSettings settings={settings} />
+            <Card title="API & Integrations">
+              <div className="space-y-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                <p>API docs: <a href="/api/docs" target="_blank" className="underline" style={{ color: 'var(--accent)' }}>/api/docs</a> (Swagger UI)</p>
+                <p>Prometheus metrics: <a href="/metrics" target="_blank" className="underline" style={{ color: 'var(--accent)' }}>/metrics</a></p>
+                <div className="border-t pt-3 mt-3" style={{ borderColor: 'var(--border)' }}>
+                  <p className="font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Webhooks</p>
+                  <p>Endpoint: <code className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-primary)' }}>POST /api/v1/webhooks/incoming</code></p>
+                  <p className="text-xs mt-1">Supports Uptime Kuma, Grafana, GitHub. Add <code>?source=myapp</code> or <code>X-Webhook-Source</code> header.</p>
+                </div>
+                <div className="border-t pt-3 mt-3" style={{ borderColor: 'var(--border)' }}>
+                  <p className="font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Integration Widgets</p>
+                  <p>All integration widgets (Jellyseerr, Sonarr, Radarr, Plex, Jellyfin, Pi-hole, qBittorrent, Transmission, Home Assistant) are configurable directly from the dashboard.</p>
+                  <p className="mt-1">Add the widget to your dashboard, then click the <strong>gear icon</strong> to enter the URL and API key.</p>
+                </div>
               </div>
-              <div className="border-t pt-3 mt-3" style={{ borderColor: 'var(--border)' }}>
-                <p className="font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Integration Widgets</p>
-                <p>All integration widgets (Jellyseerr, Sonarr, Radarr, Plex, Jellyfin, Pi-hole, qBittorrent, Transmission, Home Assistant) are configurable directly from the dashboard.</p>
-                <p className="mt-1">Add the widget to your dashboard, then click the <strong>gear icon</strong> to enter the URL and API key.</p>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </>
         )}
       </div>
     </div>
@@ -816,5 +819,98 @@ function CommunitySettings() {
         )}
       </Card>
     </>
+  );
+}
+
+function TelegramSettings({ settings }) {
+  const [token, setToken] = useState(settings.telegram_bot_token || '');
+  const [chatId, setChatId] = useState(settings.telegram_chat_id || '');
+  const [status, setStatus] = useState('');
+  const [botInfo, setBotInfo] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getTelegramStatus().then(setBotInfo).catch(() => {});
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateTelegramSettings({ bot_token: token, chat_id: chatId });
+      setStatus('Saved. Bot restarting...');
+      setTimeout(() => {
+        getTelegramStatus().then(info => {
+          setBotInfo(info);
+          setStatus(info.connected ? 'Connected' : 'Not connected — check token');
+        });
+      }, 2000);
+    } catch (e) { setStatus('Error: ' + e.message); }
+    setSaving(false);
+    setTimeout(() => setStatus(''), 5000);
+  };
+
+  const handleTest = async () => {
+    setStatus('Sending...');
+    try {
+      await testTelegram();
+      setStatus('Test message sent — check Telegram');
+    } catch (e) { setStatus('Failed: ' + e.message); }
+    setTimeout(() => setStatus(''), 5000);
+  };
+
+  return (
+    <Card title="Telegram Bot">
+      <div className="space-y-3">
+        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+          Connect a Telegram bot to chat with the AI assistant from your phone and receive push notifications.
+        </p>
+
+        {botInfo?.connected && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
+            style={{ backgroundColor: '#22c55e11', color: '#22c55e' }}>
+            <span className="w-2 h-2 rounded-full bg-green-500" />
+            Connected as @{botInfo.bot_username}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <label className="block">
+            <span className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Bot Token (from @BotFather)</span>
+            <input type="password" value={token} onChange={e => setToken(e.target.value)}
+              placeholder="7123456789:AAF..."
+              className="w-full px-3 py-2 rounded-lg border text-sm"
+              style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+          </label>
+          <label className="block">
+            <span className="text-xs mb-1 block" style={{ color: 'var(--text-secondary)' }}>Chat ID</span>
+            <input value={chatId} onChange={e => setChatId(e.target.value)}
+              placeholder="123456789"
+              className="w-full px-3 py-2 rounded-lg border text-sm"
+              style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+          </label>
+          <p className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
+            Send /start to your bot, then visit <code className="px-1 rounded" style={{ backgroundColor: 'var(--bg-primary)' }}>
+            https://api.telegram.org/bot{'<token>'}/getUpdates</code> to find your chat ID.
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={handleSave} disabled={saving || !token}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-white"
+            style={{ backgroundColor: 'var(--accent)', opacity: !token ? 0.5 : 1 }}>
+            <Send size={14} /> {saving ? 'Saving...' : 'Save & Connect'}
+          </button>
+          {botInfo?.connected && (
+            <button onClick={handleTest}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm"
+              style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+              Test Message
+            </button>
+          )}
+        </div>
+
+        {status && <p className="text-xs" style={{ color: 'var(--accent)' }}>{status}</p>}
+      </div>
+    </Card>
   );
 }
