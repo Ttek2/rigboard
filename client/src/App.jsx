@@ -1,10 +1,11 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import { useState, useEffect, createContext } from 'react';
-import { Monitor, Rss, HardDrive, Settings, Menu, X, Search } from 'lucide-react';
+import { Monitor, Rss, HardDrive, Settings, Menu, X, Search, HelpCircle } from 'lucide-react';
 import DashboardPage from './pages/DashboardPage';
 import FeedsPage from './pages/FeedsPage';
 import HardwarePage from './pages/HardwarePage';
 import SettingsPage from './pages/SettingsPage';
+import HelpPage from './pages/HelpPage';
 import SetupWizard from './components/SetupWizard';
 import SearchModal from './components/SearchModal';
 import NotificationBell from './components/NotificationBell';
@@ -103,6 +104,7 @@ function App() {
     { to: '/feeds', icon: Rss, label: 'Feeds' },
     { to: '/hardware', icon: HardDrive, label: 'Hardware' },
     { to: '/settings', icon: Settings, label: 'Settings' },
+    { to: '/help', icon: HelpCircle, label: 'Help' },
   ];
 
   return (
@@ -185,6 +187,7 @@ function App() {
               <Route path="/feeds" element={<FeedsPage />} />
               <Route path="/hardware" element={<HardwarePage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/help" element={<HelpPage />} />
             </Routes>
           </main>
           <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />

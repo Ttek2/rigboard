@@ -29,6 +29,8 @@ import NetworkWidget from '../components/widgets/NetworkWidget';
 import ReleasesWidget from '../components/widgets/ReleasesWidget';
 import PulseWidget from '../components/widgets/PulseWidget';
 import WidgetConfigModal from '../components/WidgetConfigModal';
+import { WIDGET_HELP_MAP } from './HelpPage';
+import { WidgetHelpContext } from '../components/WidgetWrapper';
 
 const WIDGET_TYPES = {
   pulse: { label: 'Community Pulse', component: PulseWidget },
@@ -196,11 +198,13 @@ export default function DashboardPage() {
             if (!WidgetComponent) return <div key={String(widget.id || index)} />;
             return (
               <div key={String(widget.id || index)}>
-                <WidgetComponent
-                  config={widget.widget_config || {}}
-                  onRemove={() => removeWidget(index)}
-                  onConfigure={() => setConfigWidget({ ...widget, _index: index })}
-                />
+                <WidgetHelpContext.Provider value={WIDGET_HELP_MAP[widget.widget_type]}>
+                  <WidgetComponent
+                    config={widget.widget_config || {}}
+                    onRemove={() => removeWidget(index)}
+                    onConfigure={() => setConfigWidget({ ...widget, _index: index })}
+                  />
+                </WidgetHelpContext.Provider>
               </div>
             );
           })}
