@@ -475,9 +475,12 @@ export default function SettingsPage() {
 
         {/* SECURITY TAB */}
         {activeTab === 'auth' && (
-          <Card title="Authentication">
-            <AuthSettings />
-          </Card>
+          <>
+            <SecurityHealth />
+            <Card title="Authentication">
+              <AuthSettings />
+            </Card>
+          </>
         )}
 
         {/* COMMUNITY TAB */}
@@ -819,6 +822,44 @@ function CommunitySettings() {
         )}
       </Card>
     </>
+  );
+}
+
+function SecurityHealth() {
+  const [status, setStatus] = useState(null);
+  useEffect(() => { getSecurityStatus().then(setStatus).catch(() => {}); }, []);
+  if (!status) return null;
+
+  const items = [
+    { label: 'Password auth', ok: status.auth_enabled, good: 'Enabled', bad: 'Disabled' },
+    { label: '2FA (TOTP)', ok: status.totp_enabled, good: 'Enabled', bad: 'Disabled' },
+    { label: 'Docker socket', ok: !status.docker_socket, good: 'Not mounted', bad: 'Mounted (root-equivalent access)' },
+    { label: 'Host /proc', ok: !status.host_proc, good: 'Not mounted', bad: 'Mounted (read-only)' },
+    { label: 'Host PID namespace', ok: !status.pid_host, good: 'Isolated', bad: 'Shared with host' },
+  ];
+
+  return (
+    <Card title="Security Health">
+      <div className="space-y-2">
+        {items.map((item, i) => (
+          <div key={i} className="flex items-center justify-between text-sm">
+            <span style={{ color: 'var(--text-secondary)' }}>{item.label}</span>
+            <span className="flex items-center gap-1.5 text-xs font-medium"
+              style={{ color: item.ok ? '#22c55e' : '#f59e0b' }}>
+              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.ok ? '#22c55e' : '#f59e0b' }} />
+              {item.ok ? item.good : item.bad}
+            </span>
+          </div>
+        ))}
+        {status.warnings?.length > 0 && (
+          <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
+            {status.warnings.map((w, i) => (
+              <p key={i} className="text-xs mb-1" style={{ color: '#f59e0b' }}>{w}</p>
+            ))}
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
 

@@ -74,6 +74,11 @@ function checkMaintenanceWebhooks(db) {
         interval_days: item.interval_days
       });
     }
+    // Push to Telegram
+    try {
+      const { sendTelegramMessage } = require('./telegramBot');
+      sendTelegramMessage(db, `🔧 *Maintenance Overdue:* ${item.task_name}\n${item.component_name} (${item.category}) in ${item.rig_name}`);
+    } catch {}
   }
 
   // Check warranty expirations (within 30 days)
@@ -123,6 +128,18 @@ function startHealthChecker(db, broadcast = () => {}) {
           '/settings'
         );
         broadcast('notification', { type: 'service', title: `Service down: ${service.name}` });
+        // Push to Telegram if configured
+        try {
+          const { sendTelegramMessage } = require('./telegramBot');
+          sendTelegramMessage(db, `🔴 *Service Down:* ${service.name}\n${service.url} is not responding`);
+        } catch {}
+      }
+      // Notify on recovery
+      if (status === 'online' && prevStatus === 'offline') {
+        try {
+          const { sendTelegramMessage } = require('./telegramBot');
+          sendTelegramMessage(db, `🟢 *Service Recovered:* ${service.name}\nResponse: ${responseTime}ms`);
+        } catch {}
       }
     }
 
