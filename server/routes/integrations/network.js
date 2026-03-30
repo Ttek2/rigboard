@@ -25,21 +25,37 @@ function getHostNetworkInterfaces() {
         }
       }
     }
-    // Match IPs to interfaces from /proc/net/if_inet6 or /proc/net/dev
-    const devNames = [];
+    // Get real host interface names from /proc/1/net/dev
+    const hostIfaces = [];
     try {
-      const dev = fs.readFileSync(`${HOST_PROC}/net/dev`, 'utf8');
+      const dev = fs.readFileSync('/proc/1/net/dev', 'utf8');
       for (const line of dev.split('\n').slice(2)) {
         const iface = line.trim().split(':')[0];
         if (iface && !['lo', 'docker0'].includes(iface) && !iface.startsWith('veth') && !iface.startsWith('br-')) {
-          devNames.push(iface);
+          hostIfaces.push(iface);
         }
       }
     } catch {}
+
+    // Map IPs to interfaces via nsenter if available
+    let ifaceMap = {};
+    try {
+      const output = execSync("nsenter -t 1 -n -- ip -4 addr show 2>/dev/null", { encoding: 'utf8', timeout: 3000 });
+      let lastIface = '';
+      for (const line of output.split('\n')) {
+        const ifMatch = line.match(/^\d+:\s+(\S+?)[@:]/);
+        if (ifMatch) lastIface = ifMatch[1];
+        const ipMatch = line.match(/inet\s+([\d.]+)/);
+        if (ipMatch && lastIface) ifaceMap[ipMatch[1]] = lastIface;
+      }
+    } catch {}
+
+    let ifaceIdx = 0;
     for (const ip of ips) {
-      // Skip Docker/bridge IPs (172.x.x.x range commonly used by Docker)
       if (ip.startsWith('172.17.') || ip.startsWith('172.18.') || ip.startsWith('172.19.')) continue;
-      localIps.push({ interface: devNames[localIps.length] || 'eth0', ip });
+      const name = ifaceMap[ip] || hostIfaces[ifaceIdx] || 'eth0';
+      if (!ifaceMap[ip]) ifaceIdx++;
+      localIps.push({ interface: name, ip });
     }
     if (localIps.length > 0) return localIps;
   } catch {}
