@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
 
 // POST /api/v1/webhooks/incoming — receive webhooks from external tools
@@ -6,6 +7,22 @@ router.post('/incoming', (req, res) => {
   const db = req.app.locals.db;
   const payload = req.body;
   const source = req.headers['x-webhook-source'] || req.query.source || 'unknown';
+
+  // Optional HMAC signature verification (if webhook_secret is configured)
+  const webhookSecret = db.prepare("SELECT value FROM settings WHERE key = 'webhook_secret'").get()?.value;
+  if (webhookSecret) {
+    const signature = req.headers['x-hub-signature-256'] || req.headers['x-webhook-signature'];
+    if (!signature) return res.status(401).json({ error: 'Missing webhook signature' });
+    const body = JSON.stringify(payload);
+    const expected = 'sha256=' + crypto.createHmac('sha256', webhookSecret).update(body).digest('hex');
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) {
+      return res.status(401).json({ error: 'Invalid webhook signature' });
+    }
+  }
+
+  // Payload size guard (reject oversized payloads)
+  const bodySize = JSON.stringify(payload).length;
+  if (bodySize > 100 * 1024) return res.status(413).json({ error: 'Payload too large' });
 
   // Store in log
   db.prepare('INSERT INTO webhook_log (source, payload) VALUES (?, ?)').run(source, JSON.stringify(payload));
