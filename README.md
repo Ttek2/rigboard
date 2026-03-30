@@ -4,6 +4,8 @@
 
 A self-hosted personal dashboard for PC gaming enthusiasts, hardware tinkerers, and homelabbers. One Docker container, no cloud dependencies, no API keys required for core functionality.
 
+![RigBoard Dashboard](https://ttek2.com/uploads/img-1774838260-262e4de8.webp)
+
 ## Quick Start
 
 ```bash
