@@ -45,6 +45,7 @@ export const getFeedItems = (id, limit) => request(`/feeds/${id}/items?limit=${l
 export const getLatestFeedItems = (limit, group) => request(`/feeds/items/latest?limit=${limit || 30}${group ? `&group=${encodeURIComponent(group)}` : ''}`);
 export const getFeedGroups = () => request('/feeds/groups');
 export const refreshFeed = (id) => request(`/feeds/${id}/refresh`, { method: 'POST' });
+export const refreshAllFeeds = () => request('/feeds/refresh-all', { method: 'POST' });
 export const markFeedItemRead = (itemId, isRead) => request(`/feeds/items/${itemId}/read`, { method: 'PUT', body: JSON.stringify({ is_read: isRead }) });
 export const toggleStarItem = (itemId) => request(`/feeds/items/${itemId}/star`, { method: 'POST' });
 export const getStarredItems = () => request('/feeds/items/starred');
