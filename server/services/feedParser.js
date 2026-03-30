@@ -65,4 +65,22 @@ function startFeedScheduler(db) {
   console.log('Feed scheduler started');
 }
 
-module.exports = { fetchFeed, startFeedScheduler };
+async function refreshAllFeeds(db) {
+  const feeds = db.prepare('SELECT * FROM feeds WHERE is_enabled = 1').all();
+  for (const feed of feeds) {
+    try {
+      const feedData = await fetchFeed(feed.url);
+      const insertItem = db.prepare(
+        'INSERT OR IGNORE INTO feed_items (feed_id, guid, title, link, summary, author, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+      );
+      for (const item of feedData.items || []) {
+        insertItem.run(feed.id, item.guid || item.link || item.title, item.title, item.link, item.contentSnippet || item.summary || null, item.creator || item.author || null, item.isoDate || item.pubDate || null);
+      }
+      db.prepare('UPDATE feeds SET last_fetched = CURRENT_TIMESTAMP WHERE id = ?').run(feed.id);
+    } catch (err) {
+      console.error(`Failed to fetch feed ${feed.url}: ${err.message}`);
+    }
+  }
+}
+
+module.exports = { fetchFeed, startFeedScheduler, refreshAllFeeds };

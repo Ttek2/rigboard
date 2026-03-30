@@ -43,7 +43,7 @@ router.post('/export', (req, res) => {
 });
 
 // POST /api/v1/settings/import
-router.post('/import', (req, res) => {
+router.post('/import', async (req, res) => {
   const db = req.app.locals.db;
   const { settings, bookmarks, feeds, widgets, services, rigs, tabs, components, notes, maintenance_logs, maintenance_schedules } = req.body;
 
@@ -75,6 +75,8 @@ router.post('/import', (req, res) => {
       for (const f of feeds) {
         insert.run(f.url, f.title, f.site_url, f.favicon_url, f.group_name, f.refresh_interval_minutes, f.is_enabled);
       }
+      // Clear last_fetched so scheduler refetches immediately
+      db.prepare('UPDATE feeds SET last_fetched = NULL').run();
     }
     if (widgets) {
       db.prepare('DELETE FROM widget_layout').run();
@@ -143,6 +145,17 @@ router.post('/import', (req, res) => {
   });
 
   transaction();
+
+  // Refresh feeds immediately so articles appear right away
+  if (feeds && feeds.length > 0) {
+    try {
+      const { refreshAllFeeds } = require('../services/feedParser');
+      await refreshAllFeeds(db);
+    } catch (err) {
+      console.error('Post-import feed refresh error:', err);
+    }
+  }
+
   res.json({ success: true });
 });
 
