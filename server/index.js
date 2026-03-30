@@ -285,6 +285,7 @@ app.use('/api/v1/integrations', require('./routes/integrations/media'));
 app.use('/api/v1/integrations/pihole', require('./routes/integrations/pihole'));
 app.use('/api/v1/integrations', require('./routes/integrations/downloads'));
 app.use('/api/v1/integrations/network', require('./routes/integrations/network'));
+app.use('/api/v1/integrations/youtube', require('./routes/integrations/youtube'));
 app.use('/api/v1/integrations/releases', require('./routes/integrations/releases'));
 app.use('/api/v1/integrations/pulse', require('./routes/integrations/pulse'));
 app.use('/api/v1/ai', require('./routes/ai'));

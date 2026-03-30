@@ -28,6 +28,7 @@ import DownloadsWidget from '../components/widgets/DownloadsWidget';
 import NetworkWidget from '../components/widgets/NetworkWidget';
 import ReleasesWidget from '../components/widgets/ReleasesWidget';
 import PulseWidget from '../components/widgets/PulseWidget';
+import YouTubeWidget from '../components/widgets/YouTubeWidget';
 import WidgetConfigModal from '../components/WidgetConfigModal';
 import { WIDGET_HELP_MAP } from './HelpPage';
 import { WidgetHelpContext } from '../components/WidgetWrapper';
@@ -56,6 +57,7 @@ const WIDGET_TYPES = {
   websearch: { label: 'Web Search', component: WebSearchWidget },
   ai: { label: 'AI Assistant', component: AIWidget },
   community: { label: 'Community', component: CommunityWidget },
+  youtube: { label: 'YouTube', component: YouTubeWidget },
 };
 
 export default function DashboardPage() {
