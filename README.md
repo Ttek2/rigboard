@@ -17,7 +17,7 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 ## Features
 
 ### Dashboard
-- 25 widget types with drag-and-drop grid layout
+- 29 widget types with drag-and-drop grid layout
 - Smart masonry packing with auto-arrange ("Tidy" button fills every gap)
 - Multiple dashboard tabs with configurable 3/4/5 column layouts
 - Widget configuration via gear icon -- no YAML editing
@@ -46,6 +46,7 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 - Shows active model name and local/API badge in the widget
 - Full context awareness: rigs, services, feeds, trending topics, community, Docker, system stats
 - Live widget updates when AI executes actions
+- **Telegram bot**: two-way AI chat from your phone, push notifications for heartbeat/maintenance/service alerts. No webhook or HTTPS needed -- uses long-polling. Setup: BotFather token + chat ID.
 
 ### Hardware Tracker
 - Document PC builds with nested component hierarchies
@@ -66,6 +67,8 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 - Default feeds ship from configurable `server/defaults/feeds.json`
 - Markdown notes with live preview, search, word count, pin support
 - Bookmarks with favicons
+- Sticky notes widget (colored Post-it style quick notes)
+- Clock / timezone widget with multiple configurable clocks
 - Web search widget with inline API results (DuckDuckGo, Brave Search, SearXNG) or redirect (Google, Bing, Startpage)
 - Global search (Cmd+K) with quick actions command palette
 
@@ -80,6 +83,8 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 - **Home Assistant** -- Entity states via HA REST API, configurable entity filter
 - **GitHub Releases** -- Track latest releases for self-hosted apps you run
 - **YouTube** -- Track uploads from subscribed channels via RSS (no API key required, supports @handles)
+- **GPU Monitor** -- NVIDIA (nvidia-smi), AMD (sysfs), Intel (sysfs) temperature, usage, VRAM, fan speed, power draw
+- **Speed Test** -- Download bandwidth test with history chart, manual run button
 
 ### Community
 - Ttek2 community integration -- browse articles, comment, discuss trending topics from dashboard
@@ -90,17 +95,21 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 
 ### System & Monitoring
 - System stats widget with real-time delta CPU calculation (updates every 5s)
+- GPU monitoring: NVIDIA, AMD, and Intel GPU temperature, usage, VRAM, fan speed, power
 - Full host monitoring from inside Docker: CPU, RAM, multi-disk detection, swap, load average, top processes
 - Network widget shows real host IPs, gateway, DNS, hostname (not container IPs)
 - Docker widget with container health badges, start/stop/restart via socket API
+- Speed test with download bandwidth measurement, latency, and historical chart
 - Notification center (maintenance overdue, service down, warranty expiring, AI insights, webhook alerts)
-- Incoming webhook receiver (Uptime Kuma, Grafana, GitHub, generic)
+- Incoming webhook receiver (Uptime Kuma, Grafana, GitHub, generic) with optional HMAC signature verification
 - Prometheus metrics endpoint at `/metrics`
 - Server-Sent Events for real-time status updates
 
 ### Security & Settings
 - Optional password authentication with session management (SQLite-backed sessions)
 - TOTP two-factor authentication (Google Authenticator, Authy, etc.)
+- Security health dashboard: auth status, privilege warnings, exposure detection
+- Version checker: compares running version vs latest GitHub release
 - Auto-backup daily with 7-day retention + manual backup button
 - Export/import full configuration as JSON (settings, widgets, feeds, services, rigs, notes, maintenance)
 - Manual feed refresh after import
