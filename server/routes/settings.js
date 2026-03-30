@@ -93,7 +93,7 @@ const wallpaperStorage = multer.diskStorage({
     cb(null, `wallpaper-${Date.now()}${ext}`);
   }
 });
-const ALLOWED_IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+const ALLOWED_IMAGE_EXTS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.avif', '.heic', '.heif', '.tiff', '.tif'];
 const imageFileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
   cb(null, ALLOWED_IMAGE_EXTS.includes(ext));

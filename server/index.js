@@ -82,7 +82,7 @@ app.use('/uploads', (req, res, next) => {
   res.setHeader('Content-Disposition', 'inline');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   const ext = path.extname(req.path).toLowerCase();
-  const safeTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.bmp': 'image/bmp' };
+  const safeTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.bmp': 'image/bmp', '.avif': 'image/avif', '.heic': 'image/heic', '.heif': 'image/heif', '.tiff': 'image/tiff', '.tif': 'image/tiff' };
   if (safeTypes[ext]) res.setHeader('Content-Type', safeTypes[ext]);
   else res.setHeader('Content-Type', 'application/octet-stream'); // Force download for unknown types
   next();
