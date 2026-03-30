@@ -1,11 +1,12 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom';
 import { useState, useEffect, createContext } from 'react';
-import { Monitor, Rss, HardDrive, Settings, Menu, X, Search, HelpCircle } from 'lucide-react';
+import { Monitor, Rss, HardDrive, Settings, Menu, X, Search, HelpCircle, Activity } from 'lucide-react';
 import DashboardPage from './pages/DashboardPage';
 import FeedsPage from './pages/FeedsPage';
 import HardwarePage from './pages/HardwarePage';
 import SettingsPage from './pages/SettingsPage';
 import HelpPage from './pages/HelpPage';
+import UptimePage from './pages/UptimePage';
 import SetupWizard from './components/SetupWizard';
 import SearchModal from './components/SearchModal';
 import NotificationBell from './components/NotificationBell';
@@ -106,6 +107,7 @@ function App() {
     { to: '/', icon: Monitor, label: 'Dashboard' },
     { to: '/feeds', icon: Rss, label: 'Feeds' },
     { to: '/hardware', icon: HardDrive, label: 'Hardware' },
+    { to: '/uptime', icon: Activity, label: 'Uptime' },
     { to: '/settings', icon: Settings, label: 'Settings' },
     { to: '/help', icon: HelpCircle, label: 'Help' },
   ];
@@ -189,6 +191,7 @@ function App() {
               <Route path="/" element={<DashboardPage />} />
               <Route path="/feeds" element={<FeedsPage />} />
               <Route path="/hardware" element={<HardwarePage />} />
+              <Route path="/uptime" element={<UptimePage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/help" element={<HelpPage />} />
             </Routes>

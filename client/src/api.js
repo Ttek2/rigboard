@@ -197,6 +197,9 @@ export const getVersion = () => request('/version');
 // Security
 export const getSecurityStatus = () => request('/security/status');
 
+// Uptime history
+export const getServiceHistory = (id, period) => request(`/services/${id}/history?period=${period || '7d'}`);
+
 // Speedtest
 export const runSpeedtest = () => request('/speedtest/run', { method: 'POST' });
 export const getSpeedtestHistory = () => request('/speedtest/history');

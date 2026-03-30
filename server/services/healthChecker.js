@@ -126,8 +126,8 @@ function startHealthChecker(db, broadcast = () => {}) {
       }
     }
 
-    // Prune old checks (keep 7 days)
-    db.prepare("DELETE FROM service_checks WHERE checked_at < datetime('now', '-7 days')").run();
+    // Prune old checks (keep 30 days for uptime history)
+    db.prepare("DELETE FROM service_checks WHERE checked_at < datetime('now', '-30 days')").run();
     // Prune old read notifications (keep 30 days)
     db.prepare("DELETE FROM notifications WHERE is_read = 1 AND created_at < datetime('now', '-30 days')").run();
   });

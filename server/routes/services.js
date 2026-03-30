@@ -84,4 +84,79 @@ router.get('/status', (req, res) => {
   res.json(servicesWithHistory);
 });
 
+// GET /api/v1/services/:id/history?period=7d|30d
+router.get('/:id/history', (req, res) => {
+  const db = req.app.locals.db;
+  const service = db.prepare('SELECT * FROM services WHERE id = ?').get(req.params.id);
+  if (!service) return res.status(404).json({ error: 'Service not found' });
+
+  const period = req.query.period === '30d' ? 30 : 7;
+  const groupBy = period > 7 ? 'daily' : 'hourly';
+
+  let dataPoints;
+  if (groupBy === 'hourly') {
+    dataPoints = db.prepare(`
+      SELECT
+        strftime('%Y-%m-%d %H:00', checked_at) as timestamp,
+        COUNT(*) as total,
+        SUM(CASE WHEN status IN ('online', 'slow') THEN 1 ELSE 0 END) as online,
+        SUM(CASE WHEN status = 'offline' THEN 1 ELSE 0 END) as offline,
+        ROUND(AVG(response_ms)) as avg_ms,
+        MAX(response_ms) as max_ms
+      FROM service_checks
+      WHERE service_id = ? AND checked_at >= datetime('now', '-${period} days')
+      GROUP BY strftime('%Y-%m-%d %H', checked_at)
+      ORDER BY timestamp ASC
+    `).all(req.params.id);
+  } else {
+    dataPoints = db.prepare(`
+      SELECT
+        strftime('%Y-%m-%d', checked_at) as timestamp,
+        COUNT(*) as total,
+        SUM(CASE WHEN status IN ('online', 'slow') THEN 1 ELSE 0 END) as online,
+        SUM(CASE WHEN status = 'offline' THEN 1 ELSE 0 END) as offline,
+        ROUND(AVG(response_ms)) as avg_ms,
+        MAX(response_ms) as max_ms
+      FROM service_checks
+      WHERE service_id = ? AND checked_at >= datetime('now', '-${period} days')
+      GROUP BY strftime('%Y-%m-%d', checked_at)
+      ORDER BY timestamp ASC
+    `).all(req.params.id);
+  }
+
+  // Incidents (periods of offline)
+  const incidents = db.prepare(`
+    SELECT checked_at, status, response_ms
+    FROM service_checks
+    WHERE service_id = ? AND status = 'offline' AND checked_at >= datetime('now', '-${period} days')
+    ORDER BY checked_at DESC
+    LIMIT 50
+  `).all(req.params.id);
+
+  // Overall uptime for period
+  const stats = db.prepare(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN status IN ('online', 'slow') THEN 1 ELSE 0 END) as online,
+      ROUND(AVG(response_ms)) as avg_ms
+    FROM service_checks
+    WHERE service_id = ? AND checked_at >= datetime('now', '-${period} days')
+  `).get(req.params.id);
+
+  const uptimePercent = stats.total > 0 ? ((stats.online / stats.total) * 100).toFixed(2) : 0;
+
+  res.json({
+    service,
+    period: `${period}d`,
+    uptime_percent: parseFloat(uptimePercent),
+    avg_ms: stats.avg_ms || 0,
+    total_checks: stats.total,
+    incidents: incidents.length,
+    data_points: dataPoints.map(d => ({
+      ...d,
+      uptime_percent: d.total > 0 ? parseFloat(((d.online / d.total) * 100).toFixed(1)) : 0,
+    })),
+  });
+});
+
 module.exports = router;
