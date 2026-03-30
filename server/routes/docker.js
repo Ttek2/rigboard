@@ -1,7 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const http = require('http');
+
+// Validate container name to prevent injection (Docker allows [a-zA-Z0-9][a-zA-Z0-9_.-])
+function isValidContainerName(name) {
+  return /^[a-zA-Z0-9][a-zA-Z0-9_.\-]{0,127}$/.test(name);
+}
 
 // Docker socket API — more reliable than CLI from inside containers
 function dockerSocketGet(path) {
@@ -68,16 +73,19 @@ router.post('/containers/:name/:action', async (req, res) => {
   if (!['start', 'stop', 'restart'].includes(action)) {
     return res.status(400).json({ error: 'Invalid action' });
   }
+  if (!isValidContainerName(name)) {
+    return res.status(400).json({ error: 'Invalid container name' });
+  }
 
   // Try socket API first
   try {
-    const status = await dockerSocketPost(`/containers/${name}/${action}`);
+    const status = await dockerSocketPost(`/containers/${encodeURIComponent(name)}/${action}`);
     if (status === 204 || status === 304) return res.json({ success: true, container: name, action });
   } catch {}
 
-  // Fallback to CLI
+  // Fallback to CLI — use execFileSync to avoid shell injection
   try {
-    execSync(`docker ${action} ${name}`, { timeout: 30000, encoding: 'utf8' });
+    execFileSync('docker', [action, name], { timeout: 30000, encoding: 'utf8' });
     res.json({ success: true, container: name, action });
   } catch (err) {
     res.status(500).json({ error: err.message });

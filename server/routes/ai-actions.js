@@ -63,9 +63,10 @@ const ACTIONS = {
     params: ['container', 'action'],
     execute: (db, params) => {
       if (!['start', 'stop', 'restart'].includes(params.action)) return { success: false, message: 'Invalid action.' };
+      if (!/^[a-zA-Z0-9][a-zA-Z0-9_.\-]{0,127}$/.test(params.container)) return { success: false, message: 'Invalid container name.' };
       try {
-        const { execSync } = require('child_process');
-        execSync(`docker ${params.action} ${params.container}`, { timeout: 30000 });
+        const { execFileSync } = require('child_process');
+        execFileSync('docker', [params.action, params.container], { timeout: 30000 });
         return { success: true, message: `Container "${params.container}" ${params.action}ed.` };
       } catch (e) { return { success: false, message: `Docker error: ${e.message}` }; }
     }
