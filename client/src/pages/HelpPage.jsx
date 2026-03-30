@@ -822,30 +822,36 @@ export const WIDGET_HELP_MAP = {
 
 export default function HelpPage() {
   const [search, setSearch] = useState('');
-  const [expanded, setExpanded] = useState({});
-  const [activeItem, setActiveItem] = useState(null);
+  const [expandedSections, setExpandedSections] = useState(() =>
+    Object.fromEntries(HELP_SECTIONS.map(s => [s.id, true]))
+  );
+  const [activeItemId, setActiveItemId] = useState(HELP_SECTIONS[0]?.items[0]?.id || null);
+  const [mobileSidebar, setMobileSidebar] = useState(false);
   const location = useLocation();
 
   // Handle hash navigation (e.g., /help#widget-system)
   useEffect(() => {
     const hash = location.hash?.slice(1);
     if (hash) {
-      // Find which section contains this item
       for (const section of HELP_SECTIONS) {
-        const item = section.items.find(i => i.id === hash);
-        if (item) {
-          setExpanded(prev => ({ ...prev, [section.id]: true }));
-          setActiveItem(hash);
-          // Scroll after render
-          setTimeout(() => {
-            document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }, 100);
+        if (section.items.find(i => i.id === hash)) {
+          setExpandedSections(prev => ({ ...prev, [section.id]: true }));
+          setActiveItemId(hash);
           break;
         }
       }
     }
   }, [location.hash]);
 
+  // Find active item content
+  let activeItem = null;
+  let activeSection = null;
+  for (const section of HELP_SECTIONS) {
+    const item = section.items.find(i => i.id === activeItemId);
+    if (item) { activeItem = item; activeSection = section; break; }
+  }
+
+  // Filter sidebar tree by search
   const filteredSections = search.length >= 2
     ? HELP_SECTIONS.map(section => ({
         ...section,
@@ -855,107 +861,170 @@ export default function HelpPage() {
       })).filter(s => s.items.length > 0)
     : HELP_SECTIONS;
 
-  const toggleSection = (id) => {
-    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+  const selectItem = (id) => {
+    setActiveItemId(id);
+    setMobileSidebar(false);
   };
 
+  // Find prev/next items for navigation
+  const allItems = HELP_SECTIONS.flatMap(s => s.items);
+  const currentIdx = allItems.findIndex(i => i.id === activeItemId);
+  const prevItem = currentIdx > 0 ? allItems[currentIdx - 1] : null;
+  const nextItem = currentIdx < allItems.length - 1 ? allItems[currentIdx + 1] : null;
+
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Help & Knowledge Base</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-            Everything you need to know about RigBoard
-          </p>
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-secondary)' }} />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search help topics..."
-          className="w-full pl-10 pr-4 py-2.5 rounded-lg border text-sm bg-transparent outline-none focus:border-current"
-          style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
-        />
-      </div>
-
-      {/* Sections */}
-      <div className="space-y-2">
-        {filteredSections.map(section => {
-          const isExpanded = expanded[section.id] || search.length >= 2;
-          const SectionIcon = section.icon;
-
-          return (
-            <div key={section.id} className="rounded-xl border overflow-hidden"
-              style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-card)' }}>
-              <button
-                onClick={() => toggleSection(section.id)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:opacity-80 transition-opacity"
-              >
-                <SectionIcon size={18} style={{ color: 'var(--accent)' }} />
-                <span className="flex-1 font-medium text-sm" style={{ color: 'var(--text-primary)' }}>
-                  {section.title}
-                </span>
-                <span className="text-xs px-2 py-0.5 rounded-full" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-primary)' }}>
-                  {section.items.length}
-                </span>
-                {isExpanded ? <ChevronDown size={16} style={{ color: 'var(--text-secondary)' }} /> : <ChevronRight size={16} style={{ color: 'var(--text-secondary)' }} />}
-              </button>
-
-              {isExpanded && (
-                <div className="border-t" style={{ borderColor: 'var(--border)' }}>
-                  {section.items.map(item => (
-                    <div key={item.id} id={item.id} className="border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
-                      <button
-                        onClick={() => setActiveItem(activeItem === item.id ? null : item.id)}
-                        className="w-full flex items-center gap-2 px-6 py-2.5 text-left hover:opacity-80 transition-opacity"
-                      >
-                        {activeItem === item.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                        <span className="text-sm" style={{ color: activeItem === item.id ? 'var(--accent)' : 'var(--text-primary)' }}>
-                          {item.title}
-                        </span>
-                      </button>
-                      {activeItem === item.id && (
-                        <div className="px-6 pb-4 pt-1">
-                          <div className="prose prose-sm max-w-none text-sm leading-relaxed"
-                            style={{ color: 'var(--text-secondary)' }}>
-                            <MarkdownContent content={item.content} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+    <div className="flex gap-0 -mx-4 -mt-6" style={{ height: 'calc(100vh - 3.5rem)' }}>
+      {/* Sidebar */}
+      <aside className={`
+        ${mobileSidebar ? 'fixed inset-0 z-50' : 'hidden'} md:relative md:block
+        w-72 min-w-[18rem] flex-shrink-0 border-r overflow-hidden flex flex-col
+      `} style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-secondary)' }}>
+        {/* Mobile overlay */}
+        {mobileSidebar && (
+          <div className="fixed inset-0 bg-black/50 md:hidden" onClick={() => setMobileSidebar(false)} />
+        )}
+        <div className={`${mobileSidebar ? 'relative z-10 w-72 h-full' : 'h-full'} flex flex-col`}
+          style={{ backgroundColor: 'var(--bg-secondary)' }}>
+          {/* Sidebar header + search */}
+          <div className="px-3 py-3 border-b flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-secondary)' }} />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Filter topics..."
+                className="w-full pl-8 pr-3 py-1.5 rounded-md border text-xs bg-transparent outline-none"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+              />
             </div>
-          );
-        })}
-      </div>
+          </div>
 
-      {filteredSections.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No help topics match "{search}"</p>
+          {/* Tree */}
+          <nav className="flex-1 overflow-y-auto py-1">
+            {filteredSections.map(section => {
+              const SectionIcon = section.icon;
+              const isExpanded = expandedSections[section.id] || search.length >= 2;
+
+              return (
+                <div key={section.id}>
+                  <button
+                    onClick={() => setExpandedSections(prev => ({ ...prev, [section.id]: !prev[section.id] }))}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:opacity-80"
+                  >
+                    {isExpanded
+                      ? <ChevronDown size={12} style={{ color: 'var(--text-secondary)' }} />
+                      : <ChevronRight size={12} style={{ color: 'var(--text-secondary)' }} />
+                    }
+                    <SectionIcon size={13} style={{ color: 'var(--accent)' }} />
+                    <span className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+                      {section.title}
+                    </span>
+                  </button>
+                  {isExpanded && (
+                    <div className="ml-4">
+                      {section.items.map(item => {
+                        const isActive = item.id === activeItemId;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => selectItem(item.id)}
+                            className="w-full text-left px-4 py-1 text-xs rounded-md truncate block"
+                            style={{
+                              color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                              backgroundColor: isActive ? 'var(--accent)11' : 'transparent',
+                              fontWeight: isActive ? 500 : 400,
+                            }}
+                          >
+                            {item.title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {filteredSections.length === 0 && (
+              <p className="text-xs text-center py-4" style={{ color: 'var(--text-secondary)' }}>
+                No topics match "{search}"
+              </p>
+            )}
+          </nav>
+
+          {/* Sidebar footer */}
+          <div className="px-3 py-2 border-t text-center flex-shrink-0" style={{ borderColor: 'var(--border)' }}>
+            <p className="text-[10px]" style={{ color: 'var(--text-secondary)' }}>
+              <a href="https://github.com/Ttek2/rigboard" target="_blank" rel="noopener noreferrer"
+                className="hover:underline" style={{ color: 'var(--accent)' }}>GitHub</a>
+              {' '}&middot;{' '}
+              <a href="https://github.com/Ttek2/rigboard/issues" target="_blank" rel="noopener noreferrer"
+                className="hover:underline" style={{ color: 'var(--accent)' }}>Report Issue</a>
+            </p>
+          </div>
         </div>
-      )}
+      </aside>
 
-      {/* Footer */}
-      <div className="mt-8 mb-4 text-center">
-        <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-          RigBoard is open source.{' '}
-          <a href="https://github.com/Ttek2/rigboard" target="_blank" rel="noopener noreferrer"
-            className="underline" style={{ color: 'var(--accent)' }}>
-            GitHub
-          </a>
-          {' '}&middot;{' '}
-          <a href="https://github.com/Ttek2/rigboard/issues" target="_blank" rel="noopener noreferrer"
-            className="underline" style={{ color: 'var(--accent)' }}>
-            Report an Issue
-          </a>
-        </p>
-      </div>
+      {/* Content */}
+      <main className="flex-1 overflow-y-auto">
+        {/* Mobile menu button */}
+        <div className="md:hidden sticky top-0 z-10 px-4 py-2 border-b"
+          style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-secondary)' }}>
+          <button onClick={() => setMobileSidebar(true)}
+            className="flex items-center gap-2 text-xs"
+            style={{ color: 'var(--text-secondary)' }}>
+            <ChevronRight size={14} />
+            {activeSection?.title} &rsaquo; {activeItem?.title}
+          </button>
+        </div>
+
+        {activeItem ? (
+          <div className="max-w-3xl px-8 py-6">
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-1.5 text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
+              {activeSection && (
+                <>
+                  {(() => { const Icon = activeSection.icon; return <Icon size={12} style={{ color: 'var(--accent)' }} />; })()}
+                  <span>{activeSection.title}</span>
+                  <ChevronRight size={10} />
+                </>
+              )}
+              <span style={{ color: 'var(--text-primary)' }}>{activeItem.title}</span>
+            </div>
+
+            {/* Title */}
+            <h1 className="text-xl font-bold mb-5" style={{ color: 'var(--text-primary)' }}>
+              {activeItem.title}
+            </h1>
+
+            {/* Content */}
+            <div className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+              <MarkdownContent content={activeItem.content} />
+            </div>
+
+            {/* Prev / Next navigation */}
+            <div className="flex items-center justify-between mt-10 pt-4 border-t" style={{ borderColor: 'var(--border)' }}>
+              {prevItem ? (
+                <button onClick={() => selectItem(prevItem.id)}
+                  className="flex items-center gap-1.5 text-xs hover:opacity-80" style={{ color: 'var(--text-secondary)' }}>
+                  <ChevronRight size={12} className="rotate-180" />
+                  {prevItem.title}
+                </button>
+              ) : <div />}
+              {nextItem ? (
+                <button onClick={() => selectItem(nextItem.id)}
+                  className="flex items-center gap-1.5 text-xs hover:opacity-80" style={{ color: 'var(--text-secondary)' }}>
+                  {nextItem.title}
+                  <ChevronRight size={12} />
+                </button>
+              ) : <div />}
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Select a topic from the sidebar</p>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
