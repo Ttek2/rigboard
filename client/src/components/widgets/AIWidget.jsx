@@ -1,11 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useContext } from 'react';
 import { Bot, Send, Trash2, Eye, Loader, HeartPulse, Brain, X } from 'lucide-react';
 import { marked } from 'marked';
 import WidgetWrapper from '../WidgetWrapper';
+import { SettingsContext } from '../../App';
 import { streamAIChat, getAIContext, triggerHeartbeat, getAIHistory, saveAIMessage, clearAIHistory, extractMemories, getAIMemory, executeAIAction, getAIAutonomy, webSearch } from '../../api';
 import { emit } from '../../events';
 
 export default function AIWidget({ config, onRemove, onConfigure }) {
+  const { settings } = useContext(SettingsContext);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
