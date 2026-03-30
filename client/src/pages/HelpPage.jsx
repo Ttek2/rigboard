@@ -832,7 +832,8 @@ export const WIDGET_HELP_MAP = {
   community: 'widget-community', jellyseerr: 'widget-jellyseerr', starr: 'widget-starr',
   media: 'widget-media', pihole: 'widget-pihole', downloads: 'widget-downloads',
   homeassistant: 'widget-homeassistant', releases: 'widget-releases',
-  youtube: 'widget-youtube',
+  youtube: 'widget-youtube', stickynote: 'widget-stickynote', clock: 'widget-clock',
+  speedtest: 'widget-speedtest', gpu: 'widget-gpu',
 };
 
 export default function HelpPage() {

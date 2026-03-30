@@ -133,6 +133,9 @@ export const getPriceHistory = (componentId) => request(`/prices/${componentId}`
 // Home Assistant
 export const getHAEntities = () => request('/homeassistant/entities');
 
+// GPU
+export const getGpuStats = () => request('/gpu/stats');
+
 // Webhooks
 export const getWebhookLog = () => request('/webhooks/log');
 
@@ -187,6 +190,21 @@ export const extractMemories = (text) => request('/ai/memory/extract', { method:
 export const getAIMemory = () => request('/ai/memory');
 export const executeAIAction = (action, params) => request('/ai/actions/execute', { method: 'POST', body: JSON.stringify({ action, params }) });
 export const getAIAutonomy = () => request('/ai/actions/autonomy');
+
+// Version
+export const getVersion = () => request('/version');
+
+// Security
+export const getSecurityStatus = () => request('/security/status');
+
+// Speedtest
+export const runSpeedtest = () => request('/speedtest/run', { method: 'POST' });
+export const getSpeedtestHistory = () => request('/speedtest/history');
+
+// Telegram
+export const getTelegramStatus = () => request('/telegram/status');
+export const testTelegram = () => request('/telegram/test', { method: 'POST' });
+export const updateTelegramSettings = (data) => request('/telegram/settings', { method: 'PUT', body: JSON.stringify(data) });
 
 // Community
 export const toggleCommunity = (enabled, displayName) => request('/community/toggle', { method: 'POST', body: JSON.stringify({ enabled, display_name: displayName }) });

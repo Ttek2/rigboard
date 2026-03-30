@@ -43,6 +43,12 @@ const WIDGET_FIELDS = {
   youtube: [
     { key: 'channels', label: 'YouTube channels (comma-separated URLs, @handles, or channel IDs)', placeholder: '@mkbhd, @LinusTechTips, @JerryRigEverything' },
   ],
+  stickynote: [
+    { key: 'color', label: 'Color (yellow, pink, green, blue, purple)', placeholder: 'yellow' },
+  ],
+  clock: [
+    { key: 'timezones', label: 'Timezones (comma-separated)', placeholder: 'America/New_York, Europe/Dublin, Asia/Tokyo' },
+  ],
 };
 
 // Integration settings (saved to server settings table)
