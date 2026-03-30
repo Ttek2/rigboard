@@ -17,7 +17,7 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 ## Features
 
 ### Dashboard
-- 24 widget types with drag-and-drop grid layout
+- 25 widget types with drag-and-drop grid layout
 - Smart masonry packing with auto-arrange ("Tidy" button fills every gap)
 - Multiple dashboard tabs with configurable 3/4/5 column layouts
 - Widget configuration via gear icon -- no YAML editing
@@ -79,6 +79,7 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 - **qBittorrent/Transmission** -- Active downloads with progress bars and speed
 - **Home Assistant** -- Entity states via HA REST API, configurable entity filter
 - **GitHub Releases** -- Track latest releases for self-hosted apps you run
+- **YouTube** -- Track uploads from subscribed channels via RSS (no API key required, supports @handles)
 
 ### Community
 - Ttek2 community integration -- browse articles, comment, discuss trending topics from dashboard
@@ -101,8 +102,10 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 - Optional password authentication with session management (SQLite-backed sessions)
 - TOTP two-factor authentication (Google Authenticator, Authy, etc.)
 - Auto-backup daily with 7-day retention + manual backup button
-- Export/import full configuration as JSON
+- Export/import full configuration as JSON (settings, widgets, feeds, services, rigs, notes, maintenance)
+- Manual feed refresh after import
 - Tabbed settings UI (General, Services, Data, Security, Community, API)
+- In-app Help & Knowledge Base with searchable documentation for all features and widgets
 
 ## Docker Compose
 
