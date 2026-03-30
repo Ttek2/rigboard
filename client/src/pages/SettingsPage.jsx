@@ -68,7 +68,6 @@ export default function SettingsPage() {
       try {
         const text = await e.target.files[0].text();
         await importConfig(JSON.parse(text));
-        // Full page reload to cleanly reinitialize all state after import
         window.location.href = '/';
       } catch (err) {
         alert('Import failed: ' + err.message);
