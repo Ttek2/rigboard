@@ -74,9 +74,15 @@ function authMiddleware(req, res, next) {
   const authEnabled = db.prepare("SELECT value FROM settings WHERE key = 'auth_enabled'").get();
   if (!authEnabled || authEnabled.value !== 'true') return next();
 
-  // Allow only specific auth routes (login, logout, status), health check, shared rigs, webhook receiver, and prometheus metrics
-  const publicPaths = ['/api/v1/auth/login', '/api/v1/auth/logout', '/api/v1/auth/status', '/api/health', '/api/v1/share/', '/api/v1/webhooks/incoming', '/metrics', '/api/v1/oauth', '/api/v1/community', '/api/v1/me'];
-  if (publicPaths.some(p => req.path.startsWith(p))) return next();
+  // Public paths: only specific auth routes, health check, shared rigs, webhooks, metrics
+  // Community read-only routes (GET) are public; mutations require auth via community token
+  const url = req.originalUrl || req.path;
+  const publicPaths = ['/api/v1/auth/login', '/api/v1/auth/logout', '/api/v1/auth/status', '/api/health', '/api/v1/share/', '/api/v1/webhooks/incoming', '/metrics'];
+  if (publicPaths.some(p => url.startsWith(p))) return next();
+
+  // Community/oauth routes: allow GET (read-only) publicly, require dashboard auth for POST/PUT/DELETE
+  const communityPrefixes = ['/api/v1/community', '/api/v1/oauth', '/api/v1/me'];
+  if (communityPrefixes.some(p => url.startsWith(p)) && req.method === 'GET') return next();
 
   if (req.session?.authenticated) return next();
   res.status(401).json({ error: 'Authentication required' });
@@ -127,10 +133,10 @@ app.get('/api/v1/auth/status', (req, res) => {
 });
 
 app.post('/api/v1/auth/setup', (req, res) => {
-  // After first-run (password already set), require authentication to change auth settings
+  // After first-run (password already exists), require authentication to change auth settings
+  // This prevents unauthenticated callers from overwriting the password even when auth is disabled
   const existingPassword = db.prepare("SELECT value FROM settings WHERE key = 'auth_password'").get();
-  const authEnabled = db.prepare("SELECT value FROM settings WHERE key = 'auth_enabled'").get();
-  if (existingPassword && authEnabled?.value === 'true' && !req.session?.authenticated) {
+  if (existingPassword && !req.session?.authenticated) {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
@@ -144,10 +150,10 @@ app.post('/api/v1/auth/setup', (req, res) => {
   res.json({ success: true });
 });
 
-// TOTP routes require authentication
+// TOTP and sensitive auth routes require authentication whenever a password has been set
 function requireAuth(req, res, next) {
-  const authEnabled = db.prepare("SELECT value FROM settings WHERE key = 'auth_enabled'").get();
-  if (authEnabled?.value === 'true' && !req.session?.authenticated) {
+  const existingPassword = db.prepare("SELECT value FROM settings WHERE key = 'auth_password'").get();
+  if (existingPassword && !req.session?.authenticated) {
     return res.status(401).json({ error: 'Authentication required' });
   }
   next();
