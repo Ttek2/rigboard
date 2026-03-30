@@ -120,9 +120,9 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 
 ## Docker Compose
 
-### Standard -- for gamers and casual users
+### Minimal -- for gamers and casual users
 
-Everything you need for a personal tech dashboard: news feeds, hardware tracking, AI assistant, YouTube subscriptions, community, bookmarks, notes, and all third-party integrations (Jellyseerr, Plex, Pi-hole, etc.). No elevated access, no host monitoring. Just run it and go.
+Everything you need for a personal tech dashboard: news feeds, hardware tracking, AI assistant, YouTube subscriptions, community, bookmarks, notes, and all third-party integrations (Jellyseerr, Plex, Pi-hole, etc.). No host access at all.
 
 ```yaml
 services:
@@ -138,9 +138,30 @@ services:
     restart: unless-stopped
 ```
 
-### Homelab / Power User -- includes host monitoring and Docker control
+### Standard -- includes host system monitoring
 
-For homelabbers and power users who want system stats, GPU monitoring, disk detection, Docker container management, and full network info from inside the dashboard. **This profile grants elevated host access** -- you should enable password authentication and understand that the Docker socket effectively grants root-level access to the host.
+Adds read-only host monitoring: CPU, RAM, swap, load, uptime, and GPU stats. No elevated privileges — just read-only mounts of host `/proc` and `/sys`. Recommended for most users who want to see system stats on their dashboard.
+
+```yaml
+services:
+  rigboard:
+    image: ghcr.io/ttek2/rigboard:latest
+    container_name: rigboard
+    ports:
+      - "0.0.0.0:3000:3000"
+    volumes:
+      - ./data:/app/data
+      - /proc:/host/proc:ro                            # System widget: CPU, RAM, swap, load, uptime
+      - /sys:/host/sys:ro                              # GPU widget: temperature, usage, VRAM
+    environment:
+      - TZ=Europe/Dublin
+      - HOST_PROC=/host/proc
+    restart: unless-stopped
+```
+
+### Homelab / Power User -- includes Docker control and full disk/process visibility
+
+For homelabbers who want Docker container management, host process listing, full disk detection, and real network info. **This profile grants elevated host access** — enable password authentication and understand that the Docker socket effectively grants root-level access to the host.
 
 ```yaml
 services:
@@ -152,20 +173,23 @@ services:
     volumes:
       - ./data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker widget: container list, start/stop/restart
-      - /proc:/host/proc:ro                            # System widget: CPU, RAM, swap
+      - /proc:/host/proc:ro                            # System widget: CPU, RAM, swap, load, uptime
       - /sys:/host/sys:ro                              # GPU + System widget: hardware info
     environment:
       - TZ=Europe/Dublin
-      - HOST_PROC=/host/proc                           # Tell RigBoard where host /proc is mounted
+      - HOST_PROC=/host/proc
     security_opt:
       - apparmor:unconfined                            # Required for host disk detection
     cap_add:
       - SYS_PTRACE                                     # Required for host disk detection
-    pid: host                                          # Host processes, network info, all disks
+    pid: host                                          # Host processes, real network info, all disks
     restart: unless-stopped
 ```
 
-> **What needs elevated access?** System stats (CPU, RAM, disks, processes), GPU monitoring, Docker container management, and the Network widget showing real host IPs. Everything else -- feeds, hardware tracker, AI, YouTube, Community Pulse, integrations, bookmarks, notes -- works with the standard profile.
+> **What needs what?**
+> - **Minimal**: feeds, rigs, AI, YouTube, Community Pulse, bookmarks, notes, all third-party integrations
+> - **Standard** adds: CPU, RAM, swap, load, uptime, GPU monitoring (read-only, no elevated privileges)
+> - **Homelab** adds: Docker start/stop/restart, host processes, all disk detection, real host IPs/hostname
 
 ## Development
 
