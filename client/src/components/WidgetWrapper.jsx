@@ -1,6 +1,13 @@
-import { GripVertical, X, Settings } from 'lucide-react';
+import { createContext, useContext } from 'react';
+import { GripVertical, X, Settings, HelpCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-export default function WidgetWrapper({ title, icon: Icon, children, onRemove, onConfigure }) {
+export const WidgetHelpContext = createContext(null);
+
+export default function WidgetWrapper({ title, icon: Icon, children, onRemove, onConfigure, helpId: propHelpId }) {
+  const navigate = useNavigate();
+  const contextHelpId = useContext(WidgetHelpContext);
+  const helpId = propHelpId || contextHelpId;
   return (
     <div className="group h-full flex flex-col rounded-xl border overflow-hidden widget-card"
       style={{ borderColor: 'var(--border)' }}>
@@ -12,6 +19,17 @@ export default function WidgetWrapper({ title, icon: Icon, children, onRemove, o
           {title}
         </div>
         <div className="flex items-center gap-0.5">
+          {helpId && (
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate(`/help#${helpId}`); }}
+              className="p-1 rounded opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity"
+              style={{ color: 'var(--text-secondary)' }}
+              onMouseDown={(e) => e.stopPropagation()}
+              title="Help"
+            >
+              <HelpCircle size={13} />
+            </button>
+          )}
           {onConfigure && (
             <button
               onClick={(e) => { e.stopPropagation(); onConfigure(); }}

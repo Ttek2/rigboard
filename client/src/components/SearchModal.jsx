@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, X, Rss, HardDrive, Bookmark, StickyNote, Cpu, Zap, Plus, Settings, Monitor } from 'lucide-react';
+import { Search, X, Rss, HardDrive, Bookmark, StickyNote, Cpu, Zap, Plus, Settings, Monitor, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { globalSearch, createBookmark, createNote } from '../api';
+import { searchHelp } from '../pages/HelpPage';
 
 const QUICK_ACTIONS = [
   { label: 'Go to Dashboard', icon: Monitor, action: (nav) => nav('/') },
   { label: 'Go to Feeds', icon: Rss, action: (nav) => nav('/feeds') },
   { label: 'Go to Hardware', icon: HardDrive, action: (nav) => nav('/hardware') },
   { label: 'Go to Settings', icon: Settings, action: (nav) => nav('/settings') },
+  { label: 'Go to Help', icon: HelpCircle, action: (nav) => nav('/help') },
   { label: 'Add Bookmark', icon: Plus, action: async (nav) => {
     const name = prompt('Bookmark name:');
     const url = prompt('URL:');
@@ -44,9 +46,11 @@ export default function SearchModal({ open, onClose }) {
 
   if (!open) return null;
 
+  const helpResults = query?.length >= 2 ? searchHelp(query) : [];
+
   const totalResults = results
-    ? results.feeds.length + results.rigs.length + results.components.length + results.bookmarks.length + results.notes.length
-    : 0;
+    ? results.feeds.length + results.rigs.length + results.components.length + results.bookmarks.length + results.notes.length + helpResults.length
+    : helpResults.length;
 
   const go = (path) => { navigate(path); onClose(); };
 
@@ -131,6 +135,19 @@ export default function SearchModal({ open, onClose }) {
                   className="block w-full text-left px-4 py-2 hover:bg-white/5 text-sm"
                   style={{ color: 'var(--text-primary)' }}>
                   {n.title}
+                </button>
+              ))}
+            </Section>
+          )}
+
+          {helpResults.length > 0 && (
+            <Section icon={HelpCircle} title="Help Topics">
+              {helpResults.map((item, i) => (
+                <button key={i} onClick={() => { navigate(`/help#${item.id}`); onClose(); }}
+                  className="block w-full text-left px-4 py-2 hover:bg-white/5 text-sm"
+                  style={{ color: 'var(--text-primary)' }}>
+                  {item.title}
+                  <span className="text-xs ml-2" style={{ color: 'var(--text-secondary)' }}>{item.sectionTitle}</span>
                 </button>
               ))}
             </Section>
