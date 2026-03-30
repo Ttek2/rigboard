@@ -99,6 +99,7 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 - Full host monitoring from inside Docker: CPU, RAM, multi-disk detection, swap, load average, top processes
 - Network widget shows real host IPs, gateway, DNS, hostname (not container IPs)
 - Docker widget with container health badges, start/stop/restart via socket API
+- **Uptime History** page with per-service 7d/30d charts, response time graphs, uptime heatmaps, incident tracking
 - Speed test with download bandwidth measurement, latency, and historical chart
 - Notification center (maintenance overdue, service down, warranty expiring, AI insights, webhook alerts)
 - Incoming webhook receiver (Uptime Kuma, Grafana, GitHub, generic) with optional HMAC signature verification
@@ -108,6 +109,7 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 ### Security & Settings
 - Optional password authentication with session management (SQLite-backed sessions)
 - TOTP two-factor authentication (Google Authenticator, Authy, etc.)
+- **First-run security prompt**: detects elevated Docker privileges, recommends password setup
 - Security health dashboard: auth status, privilege warnings, exposure detection
 - Version checker: compares running version vs latest GitHub release
 - Auto-backup daily with 7-day retention + manual backup button
