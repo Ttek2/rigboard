@@ -75,15 +75,23 @@ router.post('/import', (req, res) => {
     }
     if (widgets) {
       db.prepare('DELETE FROM widget_layout').run();
-      // Ensure a default tab exists if widgets reference tab_id but no tabs were imported
-      const tabExists = db.prepare('SELECT COUNT(*) as c FROM dashboard_tabs').get().c;
-      if (!tabExists) {
-        db.prepare('INSERT INTO dashboard_tabs (id, name, sort_order, is_default, cols) VALUES (1, ?, 0, 1, 5)').run('Dashboard');
+      // If no tabs were imported, reset tabs to ensure widget tab_ids match
+      if (!tabs) {
+        // Collect all tab_ids referenced by widgets
+        const referencedTabs = [...new Set(widgets.map(w => w.tab_id || 1))];
+        // Check which ones exist
+        const existingTabs = db.prepare('SELECT id FROM dashboard_tabs').all().map(t => t.id);
+        const missing = referencedTabs.filter(id => !existingTabs.includes(id));
+        if (missing.length > 0) {
+          // If the referenced tabs don't exist, reset tabs entirely
+          db.prepare('DELETE FROM dashboard_tabs').run();
+          const insertTab = db.prepare('INSERT INTO dashboard_tabs (id, name, sort_order, is_default, cols) VALUES (?, ?, ?, ?, ?)');
+          referencedTabs.forEach((id, i) => insertTab.run(id, i === 0 ? 'Dashboard' : `Tab ${id}`, i, i === 0 ? 1 : 0, 5));
+        }
       }
       const insert = db.prepare('INSERT INTO widget_layout (widget_type, widget_config, grid_x, grid_y, grid_w, grid_h, is_visible, tab_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
       for (const w of widgets) {
-        const tabId = w.tab_id || 1;
-        insert.run(w.widget_type, w.widget_config, w.grid_x, w.grid_y, w.grid_w, w.grid_h, w.is_visible, tabId);
+        insert.run(w.widget_type, w.widget_config, w.grid_x, w.grid_y, w.grid_w, w.grid_h, w.is_visible, w.tab_id || 1);
       }
     }
     if (services) {
