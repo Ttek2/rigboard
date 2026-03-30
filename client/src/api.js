@@ -159,6 +159,7 @@ export const getQbitTorrents = () => request('/integrations/qbittorrent/torrents
 export const getTransmissionTorrents = () => request('/integrations/transmission/torrents');
 export const getNetworkInfo = () => request('/integrations/network/info');
 export const getGithubReleases = (repos) => request(`/integrations/releases?repos=${encodeURIComponent(repos || '')}`);
+export const getYouTubeFeed = (channels) => request(`/integrations/youtube/feed?channels=${encodeURIComponent(channels || '')}`);
 export const dockerAction = (name, action) => request(`/docker/containers/${name}/${action}`, { method: 'POST' });
 export const getDockerStats = () => request('/docker/stats');
 export const webSearch = (q, provider, page = 1) => request(`/websearch?q=${encodeURIComponent(q)}${provider ? `&provider=${provider}` : ''}&page=${page}`);

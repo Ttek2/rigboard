@@ -278,6 +278,20 @@ Useful for Grafana dashboards, internal tools, documentation pages, or any web c
 
 **Configuration:** Enable community in Settings > Community. Toggle connects your RigBoard instance to ttek2.com — no OAuth or account creation needed.`
       },
+      {
+        id: 'widget-youtube',
+        title: 'YouTube',
+        content: `Track uploads from your favourite YouTube creators.
+
+**Features:**
+- Latest videos with thumbnails, titles, channel names, and time ago
+- Click to open directly on YouTube
+- Supports @handles, channel URLs, and channel IDs
+- No YouTube API key required — uses public YouTube RSS feeds
+- Refreshes every 10 minutes
+
+**Configuration:** Click the gear icon and add channels as comma-separated @handles (e.g. \`@mkbhd, @LinusTechTips\`), full channel URLs, or channel IDs.`
+      },
     ]
   },
   {
@@ -818,6 +832,7 @@ export const WIDGET_HELP_MAP = {
   community: 'widget-community', jellyseerr: 'widget-jellyseerr', starr: 'widget-starr',
   media: 'widget-media', pihole: 'widget-pihole', downloads: 'widget-downloads',
   homeassistant: 'widget-homeassistant', releases: 'widget-releases',
+  youtube: 'widget-youtube',
 };
 
 export default function HelpPage() {

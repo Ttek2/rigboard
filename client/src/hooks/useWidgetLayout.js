@@ -29,6 +29,7 @@ const WIDGET_DEFAULTS = {
   websearch: { grid_w: 2, grid_h: 3, minW: 1, minH: 2 },
   ai: { grid_w: 2, grid_h: 8, minW: 1, minH: 4 },
   community: { grid_w: 2, grid_h: 8, minW: 1, minH: 4 },
+  youtube: { grid_w: 1, grid_h: 10, minW: 1, minH: 4 },
 };
 
 async function fetchLayout(tabId) {

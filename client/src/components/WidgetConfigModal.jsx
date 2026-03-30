@@ -40,6 +40,9 @@ const WIDGET_FIELDS = {
   releases: [
     { key: 'repos', label: 'GitHub repos (comma-separated)', placeholder: 'jellyfin/jellyfin, sonarr/Sonarr' },
   ],
+  youtube: [
+    { key: 'channels', label: 'YouTube channels (comma-separated URLs, @handles, or channel IDs)', placeholder: '@mkbhd, @LinusTechTips, @JerryRigEverything' },
+  ],
 };
 
 // Integration settings (saved to server settings table)
