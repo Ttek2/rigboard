@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
-import { Sun, Moon, Download, Upload, Plus, Trash2, Activity, Database, Rss, Lock, Palette, Globe, Code, Check, Users } from 'lucide-react';
+import { Sun, Moon, Download, Upload, Plus, Trash2, Activity, Database, Rss, Lock, Palette, Globe, Code, Check, Users, RefreshCw } from 'lucide-react';
 import { SettingsContext } from '../App';
-import { updateSettings, exportConfig, importConfig, getServices, createService, deleteService, exportOPML, importOPML, createBackup, getAuthStatus, setupAuth, setupTOTP, verifyTOTP, disableTOTP, toggleCommunity, registerSite, getSettings as fetchSettings, uploadWallpaper } from '../api';
+import { updateSettings, exportConfig, importConfig, getServices, createService, deleteService, exportOPML, importOPML, createBackup, getAuthStatus, setupAuth, setupTOTP, verifyTOTP, disableTOTP, toggleCommunity, registerSite, getSettings as fetchSettings, uploadWallpaper, refreshAllFeeds } from '../api';
 import { THEMES, applyTheme, getThemeGroups } from '../themes';
 import { STYLES, applyStyle, getStyleGroups } from '../styles';
 
@@ -30,6 +30,8 @@ export default function SettingsPage() {
   const [svc, setSvc] = useState({ name: '', url: '', icon: '', group_name: 'Default' });
   const [saved, setSaved] = useState(false);
   const [backupStatus, setBackupStatus] = useState('');
+  const [feedRefreshStatus, setFeedRefreshStatus] = useState('');
+  const [importNotice, setImportNotice] = useState(false);
 
   useEffect(() => {
     setTitle(settings.dashboard_title || 'RigBoard');
@@ -68,7 +70,8 @@ export default function SettingsPage() {
       try {
         const text = await e.target.files[0].text();
         await importConfig(JSON.parse(text));
-        window.location.href = '/';
+        setImportNotice(true);
+        refreshSettings();
       } catch (err) {
         alert('Import failed: ' + err.message);
       }
@@ -419,12 +422,40 @@ export default function SettingsPage() {
             </Card>
 
             <Card title="Data & Backup">
+              {importNotice && (
+                <div className="mb-3 px-3 py-2 rounded-lg border text-sm flex items-center justify-between"
+                  style={{ borderColor: '#f59e0b', backgroundColor: '#f59e0b11', color: 'var(--text-primary)' }}>
+                  <span>Config imported. Feed articles need a manual refresh to appear.</span>
+                  <button onClick={async () => {
+                    setFeedRefreshStatus('Refreshing...');
+                    try {
+                      const r = await refreshAllFeeds();
+                      setFeedRefreshStatus(`Done — ${r.items} articles`);
+                      setImportNotice(false);
+                    } catch (e) { setFeedRefreshStatus('Failed: ' + e.message); }
+                    setTimeout(() => setFeedRefreshStatus(''), 5000);
+                  }} className="flex items-center gap-1 px-3 py-1 rounded text-xs font-medium text-white ml-3 whitespace-nowrap"
+                    style={{ backgroundColor: 'var(--accent)' }}>
+                    <RefreshCw size={12} /> Refresh Feeds
+                  </button>
+                </div>
+              )}
               <div className="flex flex-wrap gap-3">
                 <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
                   <Download size={14} /> Export Config
                 </button>
                 <button onClick={handleImport} className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
                   <Upload size={14} /> Import Config
+                </button>
+                <button onClick={async () => {
+                  setFeedRefreshStatus('Refreshing...');
+                  try {
+                    const r = await refreshAllFeeds();
+                    setFeedRefreshStatus(`Done — ${r.items} articles`);
+                  } catch (e) { setFeedRefreshStatus('Failed: ' + e.message); }
+                  setTimeout(() => setFeedRefreshStatus(''), 5000);
+                }} className="flex items-center gap-2 px-4 py-2 rounded-lg border text-sm" style={{ borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                  <RefreshCw size={14} /> Refresh Feeds
                 </button>
                 <button onClick={async () => {
                   setBackupStatus('Creating...');
@@ -435,6 +466,7 @@ export default function SettingsPage() {
                   <Database size={14} /> Backup Now
                 </button>
               </div>
+              {feedRefreshStatus && <p className="text-sm mt-2" style={{ color: 'var(--accent)' }}>{feedRefreshStatus}</p>}
               {backupStatus && <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>{backupStatus}</p>}
               <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>Auto-backup runs daily at 2:00 AM, keeping the last 7 backups.</p>
             </Card>

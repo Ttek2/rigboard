@@ -254,4 +254,17 @@ router.post('/:id/refresh', async (req, res) => {
   }
 });
 
+// POST /api/v1/feeds/refresh-all — manually refresh all feeds
+router.post('/refresh-all', async (req, res) => {
+  const db = req.app.locals.db;
+  try {
+    const { refreshAllFeeds } = require('../services/feedParser');
+    await refreshAllFeeds(db);
+    const count = db.prepare('SELECT COUNT(*) as c FROM feed_items').get().c;
+    res.json({ success: true, items: count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
