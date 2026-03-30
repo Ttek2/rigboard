@@ -120,7 +120,27 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 
 ## Docker Compose
 
-**Full (recommended)** -- includes host monitoring, Docker control, and real network info:
+### Standard -- for gamers and casual users
+
+Everything you need for a personal tech dashboard: news feeds, hardware tracking, AI assistant, YouTube subscriptions, community, bookmarks, notes, and all third-party integrations (Jellyseerr, Plex, Pi-hole, etc.). No elevated access, no host monitoring. Just run it and go.
+
+```yaml
+services:
+  rigboard:
+    image: ghcr.io/ttek2/rigboard:latest
+    container_name: rigboard
+    ports:
+      - "0.0.0.0:3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Europe/Dublin
+    restart: unless-stopped
+```
+
+### Homelab / Power User -- includes host monitoring and Docker control
+
+For homelabbers and power users who want system stats, GPU monitoring, disk detection, Docker container management, and full network info from inside the dashboard. **This profile grants elevated host access** -- you should enable password authentication and understand that the Docker socket effectively grants root-level access to the host.
 
 ```yaml
 services:
@@ -133,33 +153,19 @@ services:
       - ./data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker widget: container list, start/stop/restart
       - /proc:/host/proc:ro                            # System widget: CPU, RAM, swap
-      - /sys:/host/sys:ro                              # System widget: host hardware info
+      - /sys:/host/sys:ro                              # GPU + System widget: hardware info
     environment:
       - TZ=Europe/Dublin
       - HOST_PROC=/host/proc                           # Tell RigBoard where host /proc is mounted
     security_opt:
-      - apparmor:unconfined                            # System widget: allows host disk detection
+      - apparmor:unconfined                            # Required for host disk detection
     cap_add:
-      - SYS_PTRACE                                     # System widget: allows host disk detection
-    pid: host                                          # System widget: host processes + all disks
+      - SYS_PTRACE                                     # Required for host disk detection
+    pid: host                                          # Host processes, network info, all disks
     restart: unless-stopped
 ```
 
-**Minimal** -- no host monitoring, dashboard features only:
-
-```yaml
-services:
-  rigboard:
-    image: ghcr.io/ttek2/rigboard:latest
-    container_name: rigboard
-    ports:
-      - "0.0.0.0:3000:3000"
-    volumes:
-      - ./data:/app/data
-    environment:
-      - TZ=Europe/Dublin
-    restart: unless-stopped
-```
+> **What needs elevated access?** System stats (CPU, RAM, disks, processes), GPU monitoring, Docker container management, and the Network widget showing real host IPs. Everything else -- feeds, hardware tracker, AI, YouTube, Community Pulse, integrations, bookmarks, notes -- works with the standard profile.
 
 ## Development
 
