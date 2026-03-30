@@ -11,7 +11,7 @@ import SetupWizard from './components/SetupWizard';
 import SearchModal from './components/SearchModal';
 import NotificationBell from './components/NotificationBell';
 import LoginScreen from './components/LoginScreen';
-import { getSettings, getAuthStatus, logout } from './api';
+import { getSettings, getAuthStatus, logout, getVersion } from './api';
 import { applyTheme as applyThemePreset } from './themes';
 import { applyStyle } from './styles';
 
@@ -24,6 +24,7 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [authenticated, setAuthenticated] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   const applyAppTheme = (s) => {
     if (!s || typeof s !== 'object') return;
@@ -65,6 +66,11 @@ function App() {
         setLoading(false);
       }
     }).catch(() => { setAuthChecked(true); setLoading(false); });
+  }, []);
+
+  // Check for updates
+  useEffect(() => {
+    getVersion().then(v => { if (v.update_available) setUpdateAvailable(v.latest); }).catch(() => {});
   }, []);
 
   // Global keyboard shortcuts
@@ -127,6 +133,14 @@ function App() {
               <NavLink to="/" className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
                 <Monitor size={22} />
                 {settings.dashboard_title || 'RigBoard'}
+                {updateAvailable && (
+                  <a href={updateAvailable.url} target="_blank" rel="noopener noreferrer"
+                    className="ml-2 px-1.5 py-0.5 rounded text-[9px] font-medium"
+                    style={{ backgroundColor: '#22c55e22', color: '#22c55e', textDecoration: 'none' }}
+                    title={`Update available: ${updateAvailable.tag}`}>
+                    Update
+                  </a>
+                )}
               </NavLink>
               <div className="hidden md:flex items-center gap-1">
                 {navLinks.map(({ to, icon: Icon, label }) => (

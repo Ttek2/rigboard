@@ -4,47 +4,142 @@ const fs = require('fs');
 const { execSync } = require('child_process');
 const router = express.Router();
 
-// Track previous CPU snapshot for delta calculation
+const HOST_PROC = process.env.HOST_PROC || '/proc';
+
+// ── CPU ──────────────────────────────────────────────────────────────
+// Read from HOST_PROC/stat for accurate host CPU, no pid:host needed
 let prevCpuTimes = null;
 
 function getCpuUsage() {
-  const cpus = os.cpus();
-  let totalIdle = 0, totalTick = 0;
-  const perCore = [];
+  try {
+    const stat = fs.readFileSync(`${HOST_PROC}/stat`, 'utf8');
+    const lines = stat.split('\n');
+    const perCore = [];
+    let totalIdle = 0, totalTick = 0;
+    let coreIndex = 0;
 
-  for (let i = 0; i < cpus.length; i++) {
-    const cpu = cpus[i];
-    let idle = cpu.times.idle;
-    let total = 0;
-    for (const type in cpu.times) total += cpu.times[type];
+    for (const line of lines) {
+      if (!line.startsWith('cpu')) continue;
+      const parts = line.trim().split(/\s+/);
+      const name = parts[0];
+      // cpu = aggregate, cpu0/cpu1/... = per-core
+      const values = parts.slice(1).map(Number);
+      // user, nice, system, idle, iowait, irq, softirq, steal
+      const idle = (values[3] || 0) + (values[4] || 0);
+      const total = values.reduce((a, b) => a + b, 0);
 
-    if (prevCpuTimes && prevCpuTimes[i]) {
-      const idleDelta = idle - prevCpuTimes[i].idle;
-      const totalDelta = total - prevCpuTimes[i].total;
-      const usage = totalDelta > 0 ? Math.round((1 - idleDelta / totalDelta) * 100) : 0;
-      perCore.push({ core: i, usage });
-      totalIdle += idleDelta;
-      totalTick += totalDelta;
-    } else {
-      totalIdle += idle;
-      totalTick += total;
-      perCore.push({ core: i, usage: 0 });
+      if (name === 'cpu') {
+        // aggregate
+        if (prevCpuTimes?.aggregate) {
+          const idleDelta = idle - prevCpuTimes.aggregate.idle;
+          const totalDelta = total - prevCpuTimes.aggregate.total;
+          totalIdle = idleDelta;
+          totalTick = totalDelta;
+        }
+        if (!prevCpuTimes) prevCpuTimes = {};
+        prevCpuTimes.aggregate = { idle, total };
+      } else {
+        // per-core
+        const ci = coreIndex++;
+        let usage = 0;
+        if (prevCpuTimes?.cores?.[ci]) {
+          const idleDelta = idle - prevCpuTimes.cores[ci].idle;
+          const totalDelta = total - prevCpuTimes.cores[ci].total;
+          usage = totalDelta > 0 ? Math.round((1 - idleDelta / totalDelta) * 100) : 0;
+        }
+        perCore.push({ core: ci, usage });
+        if (!prevCpuTimes) prevCpuTimes = {};
+        if (!prevCpuTimes.cores) prevCpuTimes.cores = [];
+        prevCpuTimes.cores[ci] = { idle, total };
+      }
     }
 
-    if (!prevCpuTimes) prevCpuTimes = [];
-    prevCpuTimes[i] = { idle, total };
+    const overall = totalTick > 0 ? Math.round((1 - totalIdle / totalTick) * 100) : 0;
+    return { overall, perCore };
+  } catch {
+    // Fallback to os.cpus()
+    const cpus = os.cpus();
+    return { overall: 0, perCore: cpus.map((_, i) => ({ core: i, usage: 0 })) };
   }
-
-  const overall = totalTick > 0 ? Math.round((1 - totalIdle / totalTick) * 100) : 0;
-  return { overall, perCore };
 }
 
+function getCpuInfo() {
+  try {
+    const cpuinfo = fs.readFileSync(`${HOST_PROC}/cpuinfo`, 'utf8');
+    const modelMatch = cpuinfo.match(/model name\s*:\s*(.+)/);
+    const model = modelMatch ? modelMatch[1].trim() : 'Unknown';
+    const cores = (cpuinfo.match(/^processor\s/gm) || []).length;
+    return { model, cores: cores || os.cpus().length };
+  } catch {
+    const cpus = os.cpus();
+    return { model: cpus[0]?.model || 'Unknown', cores: cpus.length };
+  }
+}
+
+// ── Memory ───────────────────────────────────────────────────────────
+// Read from HOST_PROC/meminfo for host memory, not container cgroup limit
+function getMemory() {
+  try {
+    const meminfo = fs.readFileSync(`${HOST_PROC}/meminfo`, 'utf8');
+    const total = parseInt(meminfo.match(/MemTotal:\s+(\d+)/)?.[1] || '0') * 1024;
+    const free = parseInt(meminfo.match(/MemFree:\s+(\d+)/)?.[1] || '0') * 1024;
+    const buffers = parseInt(meminfo.match(/Buffers:\s+(\d+)/)?.[1] || '0') * 1024;
+    const cached = parseInt(meminfo.match(/Cached:\s+(\d+)/)?.[1] || '0') * 1024;
+    const used = total - free - buffers - cached;
+    return { total, used: Math.max(used, 0), percent: total > 0 ? Math.round((Math.max(used, 0) / total) * 100) : 0 };
+  } catch {
+    const total = os.totalmem();
+    const used = total - os.freemem();
+    return { total, used, percent: Math.round((used / total) * 100) };
+  }
+}
+
+function getSwap() {
+  try {
+    const meminfo = fs.readFileSync(`${HOST_PROC}/meminfo`, 'utf8');
+    const swapTotal = parseInt(meminfo.match(/SwapTotal:\s+(\d+)/)?.[1] || '0') * 1024;
+    const swapFree = parseInt(meminfo.match(/SwapFree:\s+(\d+)/)?.[1] || '0') * 1024;
+    return { total: swapTotal, used: swapTotal - swapFree };
+  } catch {
+    return { total: 0, used: 0 };
+  }
+}
+
+// ── Load + Uptime ────────────────────────────────────────────────────
+function getLoadAvg() {
+  try {
+    const loadavg = fs.readFileSync(`${HOST_PROC}/loadavg`, 'utf8').trim().split(/\s+/);
+    return { '1m': parseFloat(loadavg[0]).toFixed(2), '5m': parseFloat(loadavg[1]).toFixed(2), '15m': parseFloat(loadavg[2]).toFixed(2) };
+  } catch {
+    const loads = os.loadavg();
+    return { '1m': loads[0]?.toFixed(2), '5m': loads[1]?.toFixed(2), '15m': loads[2]?.toFixed(2) };
+  }
+}
+
+function getUptime() {
+  try {
+    const uptime = fs.readFileSync(`${HOST_PROC}/uptime`, 'utf8').trim().split(/\s+/);
+    return parseFloat(uptime[0]);
+  } catch {
+    return os.uptime();
+  }
+}
+
+// ── Hostname ─────────────────────────────────────────────────────────
+function getHostname() {
+  try {
+    return fs.readFileSync(`${HOST_PROC}/sys/kernel/hostname`, 'utf8').trim();
+  } catch {
+    return os.hostname();
+  }
+}
+
+// ── Disk ─────────────────────────────────────────────────────────────
 function getDiskUsage() {
-  const HOST_PROC = process.env.HOST_PROC || '/proc';
   const disks = [];
   const realFsTypes = ['ext4', 'ext3', 'ext2', 'xfs', 'btrfs', 'zfs', 'ntfs', 'vfat', 'f2fs', 'reiserfs'];
 
-  // Method 1: nsenter into host mount namespace (needs SYS_ADMIN + apparmor:unconfined)
+  // Method 1: nsenter (needs SYS_ADMIN + apparmor:unconfined)
   try {
     const output = execSync("nsenter -t 1 -m -u -n -- df -B1 -x tmpfs -x devtmpfs -x efivarfs -x squashfs 2>/dev/null", { encoding: 'utf8', timeout: 5000 });
     for (const line of output.trim().split('\n').slice(1)) {
@@ -63,9 +158,8 @@ function getDiskUsage() {
     }
   } catch {}
 
-  // Method 2: Parse host /proc/1/mounts + statfs via /proc/1/root (needs pid:host + SYS_PTRACE)
+  // Method 2: statfs via /proc/1/root (needs pid:host + SYS_PTRACE)
   try {
-    // Try both native /proc (pid:host) and bind-mounted HOST_PROC
     let mounts;
     try { mounts = fs.readFileSync('/proc/1/mounts', 'utf8'); } catch {}
     if (!mounts) try { mounts = fs.readFileSync(`${HOST_PROC}/1/mounts`, 'utf8'); } catch {}
@@ -76,7 +170,6 @@ function getDiskUsage() {
         const device = parts[0];
         const mountpoint = parts[1];
         if (mountpoint.includes('/docker/') || mountpoint.includes('/overlay2/') || mountpoint.includes('/containers/')) continue;
-        // Try statfs via /proc/1/root (requires pid:host + SYS_PTRACE + apparmor:unconfined)
         let stat;
         try { stat = fs.statfsSync(`/proc/1/root${mountpoint}`); } catch {}
         if (!stat) try { stat = fs.statfsSync(`${HOST_PROC}/1/root${mountpoint}`); } catch {}
@@ -96,7 +189,7 @@ function getDiskUsage() {
     }
   } catch {}
 
-  // Method 3: Fallback - container df (only sees container's own root)
+  // Method 3: container df fallback
   try {
     const output = execSync("df -B1 / 2>/dev/null | tail -1", { encoding: 'utf8', timeout: 2000 });
     const parts = output.trim().split(/\s+/);
@@ -109,55 +202,15 @@ function getDiskUsage() {
   return { total: root.total || 0, used: root.used || 0, percent: root.percent || 0, disks };
 }
 
-function getNetworkStats() {
-  try {
-    const interfaces = os.networkInterfaces();
-    const ips = [];
-    for (const [name, addrs] of Object.entries(interfaces)) {
-      for (const addr of addrs) {
-        if (!addr.internal && addr.family === 'IPv4') {
-          ips.push({ interface: name, address: addr.address });
-        }
-      }
-    }
-    return ips;
-  } catch {
-    return [];
-  }
-}
-
-function getLoadAvg() {
-  const loads = os.loadavg();
-  return { '1m': loads[0]?.toFixed(2), '5m': loads[1]?.toFixed(2), '15m': loads[2]?.toFixed(2) };
-}
-
-const HOST_PROC = process.env.HOST_PROC || '/proc';
-
-function getSwap() {
-  try {
-    // Try reading from host /proc if mounted
-    const meminfo = fs.readFileSync(`${HOST_PROC}/meminfo`, 'utf8');
-    const swapTotal = parseInt(meminfo.match(/SwapTotal:\s+(\d+)/)?.[1] || '0') * 1024;
-    const swapFree = parseInt(meminfo.match(/SwapFree:\s+(\d+)/)?.[1] || '0') * 1024;
-    return { total: swapTotal, used: swapTotal - swapFree };
-  } catch {
-    try {
-      const output = execSync("free -b | grep Swap", { encoding: 'utf8', timeout: 2000 });
-      const parts = output.trim().split(/\s+/);
-      return { total: parseInt(parts[1]) || 0, used: parseInt(parts[2]) || 0 };
-    } catch { return { total: 0, used: 0 }; }
-  }
-}
-
+// ── Processes ────────────────────────────────────────────────────────
+// Only works with pid:host — degrades gracefully without it
 function getTopProcesses() {
   try {
-    // Use top with wide output for full command names
     let output;
     try {
       output = execSync("top -b -n 1 -w 200 -o %CPU 2>/dev/null | head -20 | tail -13", { encoding: 'utf8', timeout: 5000 });
     } catch {
       try {
-        // Fallback: ps with wide output
         output = execSync("ps aux --sort=-%cpu ww 2>/dev/null | head -15 | tail -14", { encoding: 'utf8', timeout: 3000 });
       } catch {
         return [];
@@ -168,11 +221,9 @@ function getTopProcesses() {
       .filter(line => line && !line.trim().startsWith('PID') && !line.trim().startsWith('USER') && line.trim().length > 5)
       .map(line => {
         const parts = line.trim().split(/\s+/);
-        // top format: PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND...
         if (parts.length >= 12) {
           return { user: parts[1], cpu: parts[8], mem: parts[9], command: parts.slice(11).join(' ') };
         }
-        // ps format: USER PID %CPU %MEM ... COMMAND...
         if (parts.length >= 11) {
           return { user: parts[0], cpu: parts[2], mem: parts[3], command: parts.slice(10).join(' ') };
         }
@@ -181,12 +232,11 @@ function getTopProcesses() {
       .filter(p => {
         if (!p) return false;
         const cmd = p.command.toLowerCase();
-        // Filter only our own monitoring commands
         if (cmd === 'top' || cmd.startsWith('top ') || cmd.startsWith('ps ') || cmd.startsWith('head ') || cmd.startsWith('tail ')) return false;
         if (cmd.startsWith('/bin/sh -c') || cmd.startsWith('sh -c')) return false;
         return true;
       })
-      .map(p => ({ ...p, command: p.command.slice(0, 60) })) // truncate for display
+      .map(p => ({ ...p, command: p.command.slice(0, 60) }))
       .slice(0, 5);
 
     if (results.length === 0) {
@@ -196,31 +246,36 @@ function getTopProcesses() {
   } catch { return []; }
 }
 
+// ── Platform ─────────────────────────────────────────────────────────
+function getPlatform() {
+  try {
+    const version = fs.readFileSync(`${HOST_PROC}/version`, 'utf8').trim();
+    const match = version.match(/Linux version ([\S]+)/);
+    return `Linux ${match ? match[1] : ''}`;
+  } catch {
+    return `${os.type()} ${os.release()}`;
+  }
+}
+
 // GET /api/v1/system/stats
 router.get('/stats', (req, res) => {
   try {
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    const usedMem = totalMem - freeMem;
-    const disk = getDiskUsage();
-    const uptime = os.uptime();
-    const swap = getSwap();
-    const cpus = os.cpus();
+    const cpuInfo = getCpuInfo();
     const cpuUsage = getCpuUsage();
+    const memory = getMemory();
+    const swap = getSwap();
+    const disk = getDiskUsage();
+    const uptime = getUptime();
 
     res.json({
       cpu: {
-        model: cpus[0]?.model || 'Unknown',
-        cores: cpus.length,
+        model: cpuInfo.model,
+        cores: cpuInfo.cores,
         usage: cpuUsage.overall,
         per_core: cpuUsage.perCore,
       },
       load: getLoadAvg(),
-      memory: {
-        total: totalMem,
-        used: usedMem,
-        percent: Math.round((usedMem / totalMem) * 100)
-      },
+      memory,
       swap: {
         total: swap.total,
         used: swap.used,
@@ -228,26 +283,22 @@ router.get('/stats', (req, res) => {
       },
       disk,
       uptime,
-      hostname: os.hostname(),
-      platform: `${os.type()} ${os.release()}`,
+      hostname: getHostname(),
+      platform: getPlatform(),
       arch: os.arch(),
       processes: getTopProcesses(),
-      network: getNetworkStats()
+      network: [] // Network info moved to dedicated /integrations/network/info endpoint
     });
   } catch (err) {
     console.error('System stats error:', err.message);
     res.json({
-      cpu: { model: 'Unknown', cores: os.cpus().length, usage: 0, per_core: [] },
-      load: getLoadAvg(),
-      memory: { total: os.totalmem(), used: os.totalmem() - os.freemem(), percent: Math.round(((os.totalmem() - os.freemem()) / os.totalmem()) * 100) },
+      cpu: { model: 'Unknown', cores: 0, usage: 0, per_core: [] },
+      load: { '1m': '0', '5m': '0', '15m': '0' },
+      memory: { total: 0, used: 0, percent: 0 },
       swap: { total: 0, used: 0, percent: 0 },
       disk: { total: 0, used: 0, percent: 0, disks: [] },
-      uptime: os.uptime(),
-      hostname: os.hostname(),
-      platform: `${os.type()} ${os.release()}`,
-      arch: os.arch(),
-      processes: [],
-      network: []
+      uptime: 0, hostname: 'unknown', platform: 'unknown', arch: os.arch(),
+      processes: [], network: []
     });
   }
 });
@@ -263,7 +314,6 @@ router.post('/backup', async (req, res) => {
   const backupPath = `${backupDir}/rigboard-${timestamp}.db`;
 
   try {
-    // Use backup API if available, otherwise copy file
     if (typeof db.backup === 'function') {
       await db.backup(backupPath);
     } else {
