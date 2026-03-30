@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Monitor, ArrowRight, Check } from 'lucide-react';
-import { updateSettings, addFeed, saveWidgetLayout, getDefaultFeeds } from '../api';
+import { useState, useEffect } from 'react';
+import { Monitor, ArrowRight, Check, Shield, AlertTriangle } from 'lucide-react';
+import { updateSettings, addFeed, saveWidgetLayout, getDefaultFeeds, getSecurityStatus, setupAuth } from '../api';
 
 // rowHeight=40px grid units
 const DEFAULT_LAYOUT = [
@@ -18,10 +18,25 @@ export default function SetupWizard({ onComplete }) {
   const [title, setTitle] = useState('RigBoard');
   const [theme, setTheme] = useState('dark');
   const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [enableAuth, setEnableAuth] = useState(false);
+  const [securityWarnings, setSecurityWarnings] = useState([]);
+
+  useEffect(() => {
+    getSecurityStatus().then(s => {
+      setSecurityWarnings(s.warnings || []);
+    }).catch(() => {});
+  }, []);
 
   const finish = async () => {
     setLoading(true);
     try {
+      // Save auth if user chose to enable it
+      if (enableAuth && password && password === confirmPassword) {
+        await setupAuth(password, true);
+      }
+
       await updateSettings({ dashboard_title: title, theme, setup_complete: 'true' });
       document.documentElement.setAttribute('data-theme', theme);
 
@@ -38,6 +53,8 @@ export default function SetupWizard({ onComplete }) {
     }
     setLoading(false);
   };
+
+  const hasDockerWarnings = securityWarnings.some(w => w.includes('Docker socket') || w.includes('host'));
 
   const steps = [
     // Welcome
@@ -76,11 +93,70 @@ export default function SetupWizard({ onComplete }) {
           ))}
         </div>
       </label>
-      <button onClick={finish} disabled={loading}
+      <button onClick={() => setStep(2)}
+        className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium text-white"
+        style={{ backgroundColor: 'var(--accent)' }}>
+        Next <ArrowRight size={18} />
+      </button>
+    </div>,
+    // Security
+    <div key="security" className="max-w-sm mx-auto">
+      <div className="flex items-center gap-2 mb-4">
+        <Shield size={24} style={{ color: 'var(--accent)' }} />
+        <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Security</h2>
+      </div>
+
+      {hasDockerWarnings && (
+        <div className="mb-4 px-3 py-2 rounded-lg border text-xs" style={{ borderColor: '#f59e0b', backgroundColor: '#f59e0b11', color: 'var(--text-secondary)' }}>
+          <div className="flex items-center gap-1.5 mb-1">
+            <AlertTriangle size={12} style={{ color: '#f59e0b' }} />
+            <span className="font-medium" style={{ color: '#f59e0b' }}>Elevated privileges detected</span>
+          </div>
+          Your RigBoard has access to the Docker socket and/or host system. Setting a password is recommended to prevent unauthorized access from your network.
+        </div>
+      )}
+
+      <div className="mb-4">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={enableAuth} onChange={e => setEnableAuth(e.target.checked)}
+            className="rounded" />
+          <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Enable password protection</span>
+        </label>
+      </div>
+
+      {enableAuth && (
+        <div className="space-y-3 mb-4">
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+            placeholder="Password"
+            className="w-full px-3 py-2 rounded-lg border text-sm"
+            style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+          <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+            placeholder="Confirm password"
+            className="w-full px-3 py-2 rounded-lg border text-sm"
+            style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
+          {password && confirmPassword && password !== confirmPassword && (
+            <p className="text-xs" style={{ color: '#ef4444' }}>Passwords don't match</p>
+          )}
+        </div>
+      )}
+
+      <p className="text-xs mb-6" style={{ color: 'var(--text-secondary)' }}>
+        You can change this later in Settings &gt; Security. 2FA is also available.
+      </p>
+
+      <button onClick={finish} disabled={loading || (enableAuth && (!password || password !== confirmPassword))}
         className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-medium text-white"
         style={{ backgroundColor: 'var(--accent)', opacity: loading ? 0.7 : 1 }}>
         {loading ? 'Setting up...' : <><Check size={18} /> Finish Setup</>}
       </button>
+
+      {!enableAuth && (
+        <button onClick={finish} disabled={loading}
+          className="w-full mt-2 text-xs py-2"
+          style={{ color: 'var(--text-secondary)' }}>
+          Skip — I'll set this up later
+        </button>
+      )}
     </div>,
   ];
 
