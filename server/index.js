@@ -65,7 +65,11 @@ app.locals.db = db;
 app.locals.DATA_DIR = DATA_DIR;
 
 // Middleware
-app.use(helmet({ contentSecurityPolicy: false }));
+// COOP + Origin-Agent-Cluster only apply on a "trustworthy" origin (HTTPS or
+// localhost). RigBoard is typically served over plain HTTP on a LAN IP, where
+// the browser ignores them and logs warnings — disable them to keep the console
+// clean. (CSP is handled at the proxy/app layer, not here.)
+app.use(helmet({ contentSecurityPolicy: false, crossOriginOpenerPolicy: false, originAgentCluster: false }));
 app.use(cors({
   credentials: true,
   origin: (origin, callback) => {
