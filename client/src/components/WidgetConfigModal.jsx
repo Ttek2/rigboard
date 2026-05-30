@@ -17,7 +17,7 @@ const WIDGET_FIELDS = {
     { key: 'city', label: 'City', placeholder: 'Dublin' },
   ],
   websearch: [
-    { key: 'engine', label: 'Default engine (duckduckgo, brave, searxng, google, bing, startpage)', placeholder: 'duckduckgo' },
+    { key: 'engine', label: 'Default engine (ttek2, duckduckgo, brave, searxng, google, bing, startpage)', placeholder: 'ttek2' },
   ],
   ai: [
     { key: 'include_context', label: 'Include dashboard context (true/false)', placeholder: 'true' },
@@ -84,7 +84,7 @@ const INTEGRATION_FIELDS = {
     { key: 'ha_token', label: 'Long-Lived Access Token', placeholder: 'eyJ...', icon: Key, password: true },
   ],
   websearch: [
-    { key: 'search_provider', label: 'Search API provider', placeholder: 'duckduckgo (no key), brave (key required), searxng (URL required)' },
+    { key: 'search_provider', label: 'Search API provider', placeholder: 'ttek2 (default, no key), duckduckgo (no key), brave (key required), searxng (URL required)' },
     { key: 'brave_search_api_key', label: 'Brave Search API Key', placeholder: 'BSA...', icon: Key, password: true },
     { key: 'searxng_url', label: 'SearXNG Instance URL', placeholder: 'https://search.example.com', icon: Link },
   ],

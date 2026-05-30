@@ -5,6 +5,7 @@ import { SettingsContext } from '../../App';
 import { webSearch } from '../../api';
 
 const ENGINES = {
+  ttek2: { name: 'ttek2', icon: '🛰️', hasApi: true },
   brave: { name: 'Brave', icon: '🦁', hasApi: true },
   searxng: { name: 'SearXNG', icon: '🔍', hasApi: true },
   duckduckgo: { name: 'DuckDuckGo', icon: '🦆', hasApi: true },
@@ -22,7 +23,7 @@ export default function WebSearchWidget({ config, onRemove, onConfigure }) {
   const [page, setPage] = useState(1);
   const [lastQuery, setLastQuery] = useState('');
   const [lastEngine, setLastEngine] = useState('');
-  const engineId = config?.engine || settings.search_provider || 'duckduckgo';
+  const engineId = config?.engine || settings.search_provider || 'ttek2';
 
   const doSearch = async (q, eng, pg = 1) => {
     const engDef = ENGINES[eng];
