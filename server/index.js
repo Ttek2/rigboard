@@ -18,9 +18,20 @@ if (!fs.existsSync(DATA_DIR)) {
 
 // Initialize database
 const dbPath = path.join(DATA_DIR, 'rigboard.db');
+const dbPreexisted = fs.existsSync(dbPath);
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
+
+// Make data loss loud: if a brand-new DB is created on every boot, DATA_DIR is
+// not on a persistent volume (see docker-compose.yml) and config will be wiped.
+if (dbPreexisted) {
+  console.log(`[rigboard] Opened existing database at ${dbPath}`);
+} else {
+  console.warn(`[rigboard] No database found — created a NEW empty one at ${dbPath}. ` +
+    `If this appears on EVERY restart, DATA_DIR (${DATA_DIR}) is NOT on a persistent volume ` +
+    `and your data will not survive reboots.`);
+}
 
 // Run schema
 const schema = fs.readFileSync(path.join(__dirname, 'db', 'schema.sql'), 'utf8');
@@ -79,7 +90,22 @@ app.use(express.json({ limit: '5mb' }));
 
 // Session for auth (SQLite-backed, no memory leak)
 const SqliteStore = require('better-sqlite3-session-store')(session);
-const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+// Stable session secret: prefer SESSION_SECRET, else persist a generated one in
+// DATA_DIR so logins survive restarts (a fresh random secret each boot would log
+// everyone out on every restart, even when the database itself persists).
+const sessionSecret = (() => {
+  if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
+  const secretPath = path.join(DATA_DIR, '.session_secret');
+  try {
+    if (fs.existsSync(secretPath)) return fs.readFileSync(secretPath, 'utf8').trim();
+    const generated = crypto.randomBytes(32).toString('hex');
+    fs.writeFileSync(secretPath, generated, { mode: 0o600 });
+    return generated;
+  } catch (e) {
+    // DATA_DIR not writable — fall back to ephemeral (logins won't persist)
+    return crypto.randomBytes(32).toString('hex');
+  }
+})();
 app.use(session({
   store: new SqliteStore({ client: db, expired: { clear: true, intervalMs: 900000 } }),
   secret: sessionSecret,
