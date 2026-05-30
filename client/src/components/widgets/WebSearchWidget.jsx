@@ -1,5 +1,6 @@
 import { useState, useContext } from 'react';
 import { Search, ExternalLink, Loader, AlertCircle } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import WidgetWrapper from '../WidgetWrapper';
 import { SettingsContext } from '../../App';
 import { webSearch } from '../../api';
@@ -126,18 +127,45 @@ export default function WebSearchWidget({ config, onRemove, onConfigure }) {
           <div className="flex-1 overflow-auto mt-2 space-y-1 min-h-0">
             {results.length === 0 && !error ? (
               <p className="text-xs text-center py-4" style={{ color: 'var(--text-secondary)' }}>No results found</p>
-            ) : results.map((r, i) => (
-              <a key={i} href={r.url} target="_blank" rel="noopener noreferrer"
-                className="block p-2 rounded-lg hover:bg-white/5 transition-colors group"
-                style={{ textDecoration: 'none' }}>
-                <p className="text-xs font-medium group-hover:text-cyan-400 transition-colors flex items-center gap-1" style={{ color: 'var(--accent)' }}>
-                  {r.title}
-                  <ExternalLink size={9} className="opacity-0 group-hover:opacity-50 flex-shrink-0" />
-                </p>
-                <p className="text-[10px] truncate" style={{ color: '#22c55e' }}>{r.url}</p>
-                {r.snippet && <p className="text-[10px] mt-0.5 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{r.snippet}</p>}
+            ) : results.map((r, i) => {
+              const isTtek2 = r.source === 'ttek2';
+              return (
+                <div key={i} className="block p-2 rounded-lg hover:bg-white/5 transition-colors group">
+                  <a href={r.url} target="_blank" rel="noopener noreferrer"
+                    className="text-xs font-medium group-hover:text-cyan-400 transition-colors flex items-start gap-1" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+                    <span className="flex-1">{r.title}</span>
+                    <ExternalLink size={9} className="opacity-0 group-hover:opacity-50 flex-shrink-0 mt-0.5" />
+                  </a>
+                  {isTtek2 && (r.domain || r.published_at) ? (
+                    <p className="text-[10px] flex items-center gap-1.5" style={{ color: 'var(--text-secondary)' }}>
+                      {r.domain && <span style={{ color: '#22c55e' }}>{r.domain}</span>}
+                      {r.published_at && <span>· {formatDistanceToNow(new Date(r.published_at), { addSuffix: true })}</span>}
+                    </p>
+                  ) : (
+                    <p className="text-[10px] truncate" style={{ color: '#22c55e' }}>{r.url}</p>
+                  )}
+                  {r.snippet && <p className="text-[10px] mt-0.5 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{r.snippet}</p>}
+                  {isTtek2 && r.topic_slugs?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {r.topic_slugs.slice(0, 4).map((slug, j) => (
+                        <a key={j} href={`https://ttek2.com/topics/${slug}`} target="_blank" rel="noopener noreferrer"
+                          className="px-1.5 py-0.5 rounded text-[9px] font-medium hover:opacity-80" style={{ backgroundColor: 'var(--accent)11', color: 'var(--accent)', textDecoration: 'none' }}>
+                          #{slug}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* ttek2 synergy: jump to the full SERP on ttek2.com */}
+            {lastEngine === 'ttek2' && lastQuery && results.length > 0 && (
+              <a href={`https://ttek2.com/search?q=${encodeURIComponent(lastQuery)}`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1 text-[10px] py-1.5 mt-1 border-t" style={{ borderColor: 'var(--border)', color: 'var(--accent)', textDecoration: 'none' }}>
+                See all results on ttek2.com <ExternalLink size={9} />
               </a>
-            ))}
+            )}
 
             {/* Pagination */}
             {results.length > 0 && (

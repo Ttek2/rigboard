@@ -26,7 +26,7 @@ const WIDGET_DEFAULTS = {
   network: { grid_w: 1, grid_h: 7, minW: 1, minH: 3 },
   releases: { grid_w: 1, grid_h: 7, minW: 1, minH: 3 },
   pulse: { grid_w: 2, grid_h: 10, minW: 1, minH: 5 },
-  websearch: { grid_w: 2, grid_h: 3, minW: 1, minH: 2 },
+  websearch: { grid_w: 2, grid_h: 9, minW: 1, minH: 4 },
   ai: { grid_w: 2, grid_h: 8, minW: 1, minH: 4 },
   community: { grid_w: 2, grid_h: 8, minW: 1, minH: 4 },
   youtube: { grid_w: 1, grid_h: 10, minW: 1, minH: 4 },

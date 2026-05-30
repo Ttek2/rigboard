@@ -4,6 +4,10 @@ import { getSettings, updateSettings } from '../api';
 
 // Widget-level config (saved to widget_config)
 const WIDGET_FIELDS = {
+  pulse: [
+    { key: 'compact', label: 'Compact rows (true/false)', placeholder: 'true' },
+    { key: 'maxTopics', label: 'Max topics to show', type: 'number', placeholder: '20' },
+  ],
   feeds: [
     { key: 'title', label: 'Widget Title', placeholder: 'News Feed' },
     { key: 'group', label: 'Feed Group', placeholder: 'Leave empty for all' },

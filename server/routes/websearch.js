@@ -17,7 +17,10 @@ async function searchTtek2(query, count = 20, page = 1) {
     title: r.title,
     url: r.url,
     snippet: r.snippet,
-    source: 'ttek2'
+    source: 'ttek2',
+    domain: r.domain,
+    published_at: r.published_at,
+    topic_slugs: r.topic_slugs || [],
   }));
 }
 
