@@ -6,7 +6,7 @@ services:
     ports:
       - "0.0.0.0:${PORT:-3000}:3000"
     volumes:
-      - ./data:/app/data
+      - rigboard_data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -16,9 +16,18 @@ services:
       - DATA_DIR=/app/data
       - HOST=0.0.0.0
       - HOST_PROC=/host/proc
+      - SESSION_SECRET=${SESSION_SECRET:-}
     security_opt:
       - apparmor:unconfined
     cap_add:
       - SYS_PTRACE
     restart: unless-stopped
     pid: host
+
+# Named volume keeps the SQLite DB + uploads on reboot-durable storage that is
+# independent of the directory compose is run from (a relative `./data` bind
+# mount can be lost on reboot if compose runs from a different CWD or the path
+# isn't persistent). To use a host folder instead, replace the volume above with
+# an ABSOLUTE path, e.g. `- /srv/rigboard/data:/app/data`.
+volumes:
+  rigboard_data:

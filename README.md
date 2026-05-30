@@ -132,10 +132,13 @@ services:
     ports:
       - "0.0.0.0:3000:3000"
     volumes:
-      - ./data:/app/data
+      - rigboard_data:/app/data
     environment:
       - TZ=Europe/Dublin
     restart: unless-stopped
+
+volumes:
+  rigboard_data:
 ```
 
 ### Standard -- includes host system monitoring
@@ -150,13 +153,16 @@ services:
     ports:
       - "0.0.0.0:3000:3000"
     volumes:
-      - ./data:/app/data
+      - rigboard_data:/app/data
       - /proc:/host/proc:ro                            # System widget: CPU, RAM, swap, load, uptime
       - /sys:/host/sys:ro                              # GPU widget: temperature, usage, VRAM
     environment:
       - TZ=Europe/Dublin
       - HOST_PROC=/host/proc
     restart: unless-stopped
+
+volumes:
+  rigboard_data:
 ```
 
 ### Homelab / Power User -- includes Docker control and full disk/process visibility
@@ -171,7 +177,7 @@ services:
     ports:
       - "0.0.0.0:3000:3000"
     volumes:
-      - ./data:/app/data
+      - rigboard_data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker widget: container list, start/stop/restart
       - /proc:/host/proc:ro                            # System widget: CPU, RAM, swap, load, uptime
       - /sys:/host/sys:ro                              # GPU + System widget: hardware info
@@ -184,6 +190,9 @@ services:
       - SYS_PTRACE                                     # Required for host disk detection
     pid: host                                          # Host processes, real network info, all disks
     restart: unless-stopped
+
+volumes:
+  rigboard_data:
 ```
 
 > **What needs what?**
@@ -192,6 +201,19 @@ services:
 > - **Homelab** adds: Docker start/stop/restart, host processes, all disk detection, real host IPs/hostname/gateway
 >
 > The Network widget works best with `pid: host` (Homelab profile) for accurate host IP and interface detection. Without it, network info may show container-level data.
+
+### Data & persistence
+
+RigBoard keeps everything (config, rigs, feeds, notes, sessions) in a SQLite database under `/app/data`. The compose profiles above use a Docker **named volume** (`rigboard_data`) that survives reboots and `docker compose up/down` regardless of which directory you run compose from.
+
+> **Avoid a relative `./data:/app/data` bind mount.** If compose ever starts from a different working directory, or that path isn't on persistent storage, the container comes up with an empty database and your config is wiped on reboot. After a restart the container logs either `Opened existing database` (healthy) or a `created a NEW empty one …` warning — check `docker logs rigboard` if config keeps resetting.
+
+- **Want a host folder you can back up directly?** Replace the named volume with an absolute path, e.g. `- /srv/rigboard/data:/app/data`.
+- **Migrating from an old `./data` bind mount?** Copy it into the named volume once:
+  ```
+  docker run --rm -v "$PWD/data":/from -v rigboard_data:/to alpine sh -c 'cp -a /from/. /to/'
+  ```
+- Logins persist across restarts via a session secret stored in `/app/data/.session_secret` (or set `SESSION_SECRET` explicitly).
 
 ## Development
 
