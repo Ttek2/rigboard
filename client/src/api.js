@@ -209,6 +209,3 @@ export const getTelegramStatus = () => request('/telegram/status');
 export const testTelegram = () => request('/telegram/test', { method: 'POST' });
 export const updateTelegramSettings = (data) => request('/telegram/settings', { method: 'PUT', body: JSON.stringify(data) });
 
-// Community
-export const toggleCommunity = (enabled, displayName) => request('/community/toggle', { method: 'POST', body: JSON.stringify({ enabled, display_name: displayName }) });
-export const registerSite = (data) => request('/community/sites', { method: 'POST', body: JSON.stringify(data) });
