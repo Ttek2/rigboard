@@ -1,7 +1,26 @@
 const express = require('express');
 const router = express.Router();
 
+// ttek2's own search engine (default provider). Base URL overridable via
+// TTEK2_BASE_URL, matching the pulse integration convention; defaults to the
+// public host. The endpoint is keyless, public, BM25-only.
+const TTEK2_BASE_URL = (process.env.TTEK2_BASE_URL || 'https://ttek2.com').replace(/\/+$/, '');
+
 // Search providers
+async function searchTtek2(query, count = 20, page = 1) {
+  const res = await fetch(`${TTEK2_BASE_URL}/api/search?q=${encodeURIComponent(query)}&page=${page}`, {
+    headers: { 'User-Agent': 'RigBoard/1.0', Accept: 'application/json' },
+    signal: AbortSignal.timeout(10000),
+  });
+  const data = await res.json();
+  return (data.results || []).slice(0, count).map(r => ({
+    title: r.title,
+    url: r.url,
+    snippet: r.snippet,
+    source: 'ttek2'
+  }));
+}
+
 async function searchBrave(query, apiKey, count = 5, offset = 0) {
   const res = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${count}&offset=${offset}`, {
     headers: { 'X-Subscription-Token': apiKey, Accept: 'application/json' },
@@ -53,14 +72,16 @@ router.get('/', async (req, res) => {
   const { q, provider, count, page } = req.query;
   if (!q) return res.status(400).json({ error: 'Query required' });
 
-  const searchProvider = provider || db.prepare("SELECT value FROM settings WHERE key = 'search_provider'").get()?.value || 'duckduckgo';
+  const searchProvider = provider || db.prepare("SELECT value FROM settings WHERE key = 'search_provider'").get()?.value || 'ttek2';
   const resultCount = parseInt(count) || 5;
   const pageNum = Math.max(1, Math.min(10, parseInt(page) || 1));
   const offset = (pageNum - 1) * resultCount;
 
   try {
     let results;
-    if (searchProvider === 'brave') {
+    if (searchProvider === 'ttek2') {
+      results = await searchTtek2(q, 20, pageNum);
+    } else if (searchProvider === 'brave') {
       const apiKey = db.prepare("SELECT value FROM settings WHERE key = 'brave_search_api_key'").get()?.value;
       if (!apiKey) return res.status(400).json({ error: 'Brave Search API key not configured. Set brave_search_api_key in settings.' });
       results = await searchBrave(q, apiKey, resultCount, offset);

@@ -40,6 +40,9 @@ db.exec(schema);
 // Migrations
 try { db.exec('ALTER TABLE widget_layout ADD COLUMN tab_id INTEGER REFERENCES dashboard_tabs(id) ON DELETE CASCADE'); } catch (e) {}
 try { db.exec('ALTER TABLE community_comments ADD COLUMN topic_context TEXT'); } catch (e) {}
+// Default the web-search provider to ttek2 for installs that haven't explicitly
+// chosen one (ON CONFLICT DO NOTHING preserves a user's deliberate choice).
+try { db.prepare("INSERT INTO settings (key, value) VALUES ('search_provider', 'ttek2') ON CONFLICT(key) DO NOTHING").run(); } catch (e) {}
 
 // Insert default settings if empty
 const settingsCount = db.prepare('SELECT COUNT(*) as count FROM settings').get();

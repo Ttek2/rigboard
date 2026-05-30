@@ -125,10 +125,18 @@ const ACTIONS = {
     risk: 'low',
     params: ['query'],
     execute: async (db, params) => {
-      const searchProvider = db.prepare("SELECT value FROM settings WHERE key = 'search_provider'").get()?.value || 'duckduckgo';
+      const searchProvider = db.prepare("SELECT value FROM settings WHERE key = 'search_provider'").get()?.value || 'ttek2';
 
       let results;
-      if (searchProvider === 'brave') {
+      if (searchProvider === 'ttek2') {
+        const base = (process.env.TTEK2_BASE_URL || 'https://ttek2.com').replace(/\/+$/, '');
+        const res = await fetch(`${base}/api/search?q=${encodeURIComponent(params.query)}`, {
+          headers: { 'User-Agent': 'RigBoard/1.0', Accept: 'application/json' },
+          signal: AbortSignal.timeout(10000),
+        });
+        const data = await res.json();
+        results = (data.results || []).slice(0, 8).map(r => `${r.title}: ${r.snippet} (${r.url})`).join('\n') || 'No results found.';
+      } else if (searchProvider === 'brave') {
         const apiKey = db.prepare("SELECT value FROM settings WHERE key = 'brave_search_api_key'").get()?.value;
         if (!apiKey) return { success: false, message: 'Brave API key not configured' };
         const res = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(params.query)}&count=5`, {
