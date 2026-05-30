@@ -200,22 +200,17 @@ function buildMemoryContext(db) {
     memories.map(m => `  ${m.key}: ${m.value}`).join('\n');
 }
 
-// Fetch pulse data for AI context (uses same cache as pulse route)
-let pulseCache = { data: null, fetchedAt: 0 };
+// Fetch pulse data for AI context. Reuses the shared fetchPulse() cache from the
+// pulse route so the whole server hits the upstream at most once per TTL (was a
+// second independent fetch + cache with a divergent timeout).
+const { fetchPulse } = require('./integrations/pulse');
 async function getPulseContext() {
-  // Reuse cache if fresh (5 min)
-  if (pulseCache.data && Date.now() - pulseCache.fetchedAt < 5 * 60 * 1000) {
-    return pulseCache.data;
-  }
   try {
-    const res = await fetch('https://ttek2.com/api/trending/pulse', {
-      headers: { 'User-Agent': 'RigBoard/1.0' },
-      signal: AbortSignal.timeout(8000)
-    });
-    const data = await res.json();
-    if (data.ok) { pulseCache = { data: data.data, fetchedAt: Date.now() }; return data.data; }
-  } catch {}
-  return pulseCache.data || null;
+    const data = await fetchPulse();
+    return data?.ok ? data.data : null;
+  } catch {
+    return null;
+  }
 }
 
 function buildPulseContext(pulseData) {
@@ -230,7 +225,7 @@ function buildPulseContext(pulseData) {
       const score = t.pulse?.sentiment_score;
       const severity = t.pulse?.severity || 'info';
       const prices = (t.pulse?.price_mentions || []).map(p => `${p.product}: ${p.price}`).join(', ');
-      parts.push(`  ${t.name} (score ${t.score.toFixed(1)}, ${sentiment}${score ? ` ${score}%` : ''}, ${severity}): ${t.pulse?.key_takeaway || t.pulse?.summary || 'no analysis'}`);
+      parts.push(`  ${t.name} (score ${(t.score ?? 0).toFixed(1)}, ${sentiment}${score ? ` ${score}%` : ''}, ${severity}): ${t.pulse?.key_takeaway || t.pulse?.summary || 'no analysis'}`);
       if (prices) parts.push(`    Prices: ${prices}`);
     }
   }
@@ -322,9 +317,10 @@ Keep it conversational and brief. Don't ask all questions at once -- ask one, wa
       const pulseData = await getPulseContext();
       const pulseContext = buildPulseContext(pulseData);
       if (pulseContext) {
+        const srcCount = pulseData?.sources_total || pulseData?.sources_healthy;
         systemMessages.push({
           role: 'system',
-          content: `Trending tech topics (live from 39 sources across Reddit, HN, Google Trends, RSS):\n${pulseContext}`
+          content: `Trending tech topics (live${srcCount ? ` from ${srcCount} sources` : ''} across Reddit, HN, Google Trends, RSS):\n${pulseContext}`
         });
       }
     } catch {}

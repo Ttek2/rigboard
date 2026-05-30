@@ -405,7 +405,7 @@ function PriceAlertsSection({ alerts, rigKeywords }) {
       </p>
       <div className="space-y-1">
         {alerts.slice(0, 8).map((a, i) => {
-          const isRig = rigKeywords.some(kw => a.topic.toLowerCase().includes(kw) || a.product.toLowerCase().includes(kw));
+          const isRig = rigKeywords.some(kw => (a.topic || '').toLowerCase().includes(kw) || (a.product || '').toLowerCase().includes(kw));
           return (
             <div key={i} className="flex items-center gap-2 text-xs px-2 py-1 rounded"
               style={{ backgroundColor: isRig ? 'rgba(16,185,129,0.06)' : 'var(--bg-primary)' }}>
@@ -437,7 +437,13 @@ export default function PulseWidget({ config, onRemove, onConfigure }) {
   }, []);
 
   const data = pulse?.data;
-  const topics = data?.topics || [];
+  // ttek2 now returns ALL trending topics (hundreds), sorted by score, with no
+  // server-side cap — slice client-side. Also drop malformed rows so the
+  // downstream .toFixed / .toLowerCase calls can never throw during render.
+  const maxTopics = config?.maxTopics || 20;
+  const topics = (data?.topics || [])
+    .filter(t => t && t.slug && t.name && typeof t.score === 'number')
+    .slice(0, maxTopics);
   const maxScore = topics.length > 0 ? Math.max(...topics.map(t => t.score)) : 1;
 
   return (

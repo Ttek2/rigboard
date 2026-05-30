@@ -27,7 +27,7 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 - PWA installable as a browser app
 
 ### Community Pulse
-- Real-time trending tech intelligence from 39+ sources (Reddit, Hacker News, Google Trends, RSS outlets)
+- Real-time trending tech intelligence aggregated across Reddit, Hacker News, Google Trends, and tech RSS outlets
 - AI-powered sentiment analysis (5 levels), severity classification, and price extraction with currency detection
 - "In your rig" badges -- highlights trending topics that match your hardware
 - Deals feed, price alerts, velocity keywords
@@ -87,7 +87,7 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 - **Speed Test** -- Download bandwidth test with history chart, manual run button
 
 ### Community
-- Ttek2 community integration -- browse articles, comment, discuss trending topics from dashboard
+- Ttek2 community integration -- browse trending topics, comment, and discuss from the dashboard
 - Rig badges and "Owns This Hardware" verified badges on comments
 - Threaded comments with voting and reporting
 - Outbound webhooks for community events (HMAC-signed)
@@ -235,6 +235,7 @@ All configuration through the web UI. Environment variables:
 | `TZ` | `Europe/Dublin` | Timezone |
 | `DATA_DIR` | `/app/data` | Database and uploads |
 | `HOST_PROC` | `/proc` | Host proc mount path (set to /host/proc in Docker) |
+| `TTEK2_BASE_URL` | `https://ttek2.com` | Base URL for the Community Pulse / trending API (override only if the upstream moves) |
 
 ## Contributing
 

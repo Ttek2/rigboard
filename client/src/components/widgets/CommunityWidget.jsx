@@ -130,7 +130,7 @@ function ArticleView({ article, token, siteKey, onBack }) {
 
         <a href={article.url} target="_blank" rel="noopener noreferrer"
           className="flex items-center gap-1 text-[11px] mt-2 font-medium" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
-          Read full article on ttek2.com <ExternalLink size={10} />
+          {article.isTopic ? 'View topic on ttek2.com' : 'Read full article on ttek2.com'} <ExternalLink size={10} />
         </a>
 
         {/* Comments */}
@@ -192,14 +192,33 @@ export default function CommunityWidget({ config, onRemove, onConfigure }) {
   useEffect(() => {
     getPulse().then(d => {
       if (!d.ok) return;
-      const topics = d.data.topics || [];
+      const topics = (d.data.topics || []).filter(t => t && t.slug && t.name);
       setDiscussions(topics.slice(0, 10).map(t => ({ slug: t.slug, name: t.name, score: t.score })));
-      // Collect articles from topics
-      const arts = topics.filter(t => t.latest_article).map(t => ({
-        ...t.latest_article,
-        image: t.latest_article.image?.startsWith('http') ? t.latest_article.image : (t.latest_article.image ? `https://ttek2.com${t.latest_article.image}` : null),
-        topicName: t.name, topicSlug: t.slug
-      }));
+      // Build the article feed. ttek2 retired its blog (2026-05-05), so
+      // latest_article is now always null and this list used to come up empty.
+      // Fall back to a topic-hub card (deep-links to /topics/{slug}) while still
+      // preferring a real article if the API ever populates one again.
+      const arts = topics.slice(0, 12).map(t => {
+        const la = t.latest_article;
+        if (la && la.url) {
+          return {
+            ...la,
+            image: la.image?.startsWith('http') ? la.image : (la.image ? `https://ttek2.com${la.image}` : null),
+            topicName: t.name, topicSlug: t.slug, slug: t.slug,
+          };
+        }
+        return {
+          title: t.name,
+          url: t.url,
+          image: null,
+          category: t.pulse?.themes?.[0] || null,
+          excerpt: t.pulse?.summary || t.pulse?.key_takeaway || '',
+          published_at: null,
+          slug: t.slug,
+          topicName: t.name, topicSlug: t.slug,
+          isTopic: true,
+        };
+      }).filter(a => a.url);
       setArticles(arts);
     }).catch(() => {});
   }, []);
@@ -293,7 +312,7 @@ export default function CommunityWidget({ config, onRemove, onConfigure }) {
                 <button key={t.slug} onClick={() => loadDiscussionComments(t.slug)}
                   className="w-full text-left flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors">
                   <span className="text-xs" style={{ color: 'var(--text-primary)' }}>{t.name}</span>
-                  <span className="text-[10px] font-mono" style={{ color: 'var(--text-secondary)' }}>{t.score.toFixed(1)}</span>
+                  <span className="text-[10px] font-mono" style={{ color: 'var(--text-secondary)' }}>{(t.score ?? 0).toFixed(1)}</span>
                 </button>
               ))}
             </div>

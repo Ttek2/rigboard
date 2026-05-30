@@ -1,26 +1,36 @@
 const express = require('express');
 const router = express.Router();
 
+// Base URL for the ttek2 trending API. Override with TTEK2_BASE_URL if the
+// upstream ever moves (default keeps the public production host). Trailing
+// slashes are trimmed so `${TTEK2_BASE_URL}/api/...` is always well-formed.
+const TTEK2_BASE_URL = (process.env.TTEK2_BASE_URL || 'https://ttek2.com').replace(/\/+$/, '');
+
 let cache = { data: null, fetchedAt: 0 };
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Fetch + cache the main pulse payload. Shared with the AI route (ai.js) so the
+// upstream is hit at most once per CACHE_TTL across the whole server. Throws on
+// fetch/parse failure; callers decide whether to serve stale.
+async function fetchPulse() {
+  if (cache.data && Date.now() - cache.fetchedAt < CACHE_TTL) {
+    return cache.data;
+  }
+  const response = await fetch(`${TTEK2_BASE_URL}/api/trending/pulse`, {
+    headers: { 'User-Agent': 'RigBoard/1.0' },
+    signal: AbortSignal.timeout(10000)
+  });
+  const data = await response.json();
+  cache = { data, fetchedAt: Date.now() };
+  return data;
+}
+
 // GET /api/v1/integrations/pulse
 router.get('/', async (req, res) => {
-  // Return cached data if fresh
-  if (cache.data && Date.now() - cache.fetchedAt < CACHE_TTL) {
-    return res.json(cache.data);
-  }
-
   try {
-    const response = await fetch('https://ttek2.com/api/trending/pulse', {
-      headers: { 'User-Agent': 'RigBoard/1.0' },
-      signal: AbortSignal.timeout(10000)
-    });
-    const data = await response.json();
-    cache = { data, fetchedAt: Date.now() };
-    res.json(data);
+    res.json(await fetchPulse());
   } catch (err) {
-    // Return stale cache if available
+    // Return stale cache if available, else surface a gateway error
     if (cache.data) return res.json(cache.data);
     res.status(502).json({ error: 'Failed to fetch pulse data: ' + err.message });
   }
@@ -60,7 +70,7 @@ async function fetchTtek2(path) {
   const cached = topicCache[cacheKey];
   if (cached && Date.now() - cached.fetchedAt < TOPIC_CACHE_TTL) return cached.data;
 
-  const response = await fetch(`https://ttek2.com${path}`, {
+  const response = await fetch(`${TTEK2_BASE_URL}${path}`, {
     headers: { 'User-Agent': 'RigBoard/1.0' },
     signal: AbortSignal.timeout(10000)
   });
@@ -90,3 +100,6 @@ router.get('/history/:slug', async (req, res) => {
 });
 
 module.exports = router;
+// Shared with ai.js so AI context reuses one cache / one upstream hit per TTL.
+module.exports.fetchPulse = fetchPulse;
+module.exports.TTEK2_BASE_URL = TTEK2_BASE_URL;
