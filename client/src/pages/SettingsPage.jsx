@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { Sun, Moon, Download, Upload, Plus, Trash2, Activity, Database, Rss, Lock, Palette, Globe, Code, Check, Users, RefreshCw, Send } from 'lucide-react';
 import { SettingsContext } from '../App';
-import { updateSettings, exportConfig, importConfig, getServices, createService, deleteService, exportOPML, importOPML, createBackup, getAuthStatus, setupAuth, setupTOTP, verifyTOTP, disableTOTP, toggleCommunity, registerSite, getSettings as fetchSettings, uploadWallpaper, refreshAllFeeds, getTelegramStatus, testTelegram, updateTelegramSettings } from '../api';
+import { updateSettings, exportConfig, importConfig, getServices, createService, deleteService, exportOPML, importOPML, createBackup, getAuthStatus, setupAuth, setupTOTP, verifyTOTP, disableTOTP, toggleCommunity, registerSite, getSettings as fetchSettings, uploadWallpaper, refreshAllFeeds, getTelegramStatus, testTelegram, updateTelegramSettings, getSecurityStatus } from '../api';
 import { THEMES, applyTheme, getThemeGroups } from '../themes';
 import { STYLES, applyStyle, getStyleGroups } from '../styles';
 
