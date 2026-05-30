@@ -44,7 +44,7 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 - Web search: AI searches the web (Brave/SearXNG/DuckDuckGo), synthesizes results into natural responses
 - First-run onboarding: asks your name, setup preferences, offers to save hardware to My Rigs
 - Shows active model name and local/API badge in the widget
-- Full context awareness: rigs, services, feeds, trending topics, community, Docker, system stats
+- Full context awareness: rigs, services, feeds, trending topics, Docker, system stats
 - Live widget updates when AI executes actions
 - **Telegram bot**: two-way AI chat from your phone, push notifications for heartbeat/maintenance/service alerts. No webhook or HTTPS needed -- uses long-polling. Setup: BotFather token + chat ID.
 
@@ -86,13 +86,6 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 - **GPU Monitor** -- NVIDIA (nvidia-smi), AMD (sysfs), Intel (sysfs) temperature, usage, VRAM, fan speed, power draw
 - **Speed Test** -- Download bandwidth test with history chart, manual run button
 
-### Community
-- Ttek2 community integration -- browse trending topics, comment, and discuss from the dashboard
-- Rig badges and "Owns This Hardware" verified badges on comments
-- Threaded comments with voting and reporting
-- Outbound webhooks for community events (HMAC-signed)
-- OAuth-free: simple toggle to connect, no popups
-
 ### System & Monitoring
 - System stats widget with real-time delta CPU calculation (updates every 5s)
 - GPU monitoring: NVIDIA, AMD, and Intel GPU temperature, usage, VRAM, fan speed, power
@@ -115,14 +108,14 @@ Open http://localhost:3000. Done. Accessible from your LAN at `http://<your-ip>:
 - Auto-backup daily with 7-day retention + manual backup button
 - Export/import full configuration as JSON (settings, widgets, feeds, services, rigs, notes, maintenance)
 - Manual feed refresh after import
-- Tabbed settings UI (General, Services, Data, Security, Community, API)
+- Tabbed settings UI (General, Services, Data, Security, API)
 - In-app Help & Knowledge Base with searchable documentation for all features and widgets
 
 ## Docker Compose
 
 ### Minimal -- for gamers and casual users
 
-Everything you need for a personal tech dashboard: news feeds, hardware tracking, AI assistant, YouTube subscriptions, community, bookmarks, notes, and all third-party integrations (Jellyseerr, Plex, Pi-hole, etc.). No host access at all.
+Everything you need for a personal tech dashboard: news feeds, hardware tracking, AI assistant, YouTube subscriptions, bookmarks, notes, and all third-party integrations (Jellyseerr, Plex, Pi-hole, etc.). No host access at all.
 
 ```yaml
 services:

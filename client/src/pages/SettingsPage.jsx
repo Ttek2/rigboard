@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
-import { Sun, Moon, Download, Upload, Plus, Trash2, Activity, Database, Rss, Lock, Palette, Globe, Code, Check, Users, RefreshCw, Send } from 'lucide-react';
+import { Sun, Moon, Download, Upload, Plus, Trash2, Activity, Database, Rss, Lock, Palette, Globe, Code, Check, RefreshCw, Send } from 'lucide-react';
 import { SettingsContext } from '../App';
-import { updateSettings, exportConfig, importConfig, getServices, createService, deleteService, exportOPML, importOPML, createBackup, getAuthStatus, setupAuth, setupTOTP, verifyTOTP, disableTOTP, toggleCommunity, registerSite, getSettings as fetchSettings, uploadWallpaper, refreshAllFeeds, getTelegramStatus, testTelegram, updateTelegramSettings, getSecurityStatus } from '../api';
+import { updateSettings, exportConfig, importConfig, getServices, createService, deleteService, exportOPML, importOPML, createBackup, getAuthStatus, setupAuth, setupTOTP, verifyTOTP, disableTOTP, uploadWallpaper, refreshAllFeeds, getTelegramStatus, testTelegram, updateTelegramSettings, getSecurityStatus } from '../api';
 import { THEMES, applyTheme, getThemeGroups } from '../themes';
 import { STYLES, applyStyle, getStyleGroups } from '../styles';
 
@@ -10,7 +10,6 @@ const TABS = [
   { id: 'services', label: 'Services', icon: Activity },
   { id: 'data', label: 'Data & Feeds', icon: Database },
   { id: 'auth', label: 'Security', icon: Lock },
-  { id: 'community', label: 'Community', icon: Users },
   { id: 'api', label: 'API & Integrations', icon: Code },
 ];
 
@@ -483,11 +482,6 @@ export default function SettingsPage() {
           </>
         )}
 
-        {/* COMMUNITY TAB */}
-        {activeTab === 'community' && (
-          <CommunitySettings />
-        )}
-
         {/* API & INTEGRATIONS TAB */}
         {activeTab === 'api' && (
           <>
@@ -673,157 +667,7 @@ function AuthSettings() {
   );
 }
 
-function CommunitySettings() {
-  const [enabled, setEnabled] = useState(false);
-  const [displayName, setDisplayName] = useState('');
-  const [status, setStatus] = useState('');
-  const [siteKey, setSiteKey] = useState('');
-  const [webhookSecret, setWebhookSecret] = useState('');
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [siteName, setSiteName] = useState('');
-  const [siteUrl, setSiteUrl] = useState('');
-  const [webhookUrl, setWebhookUrl] = useState('');
-
-  useEffect(() => {
-    fetchSettings().then(s => {
-      setEnabled(s.community_opted_in === 'true');
-      setDisplayName(s.community_display_name || '');
-      setSiteKey(s.community_site_key || '');
-    }).catch(() => {});
-  }, []);
-
-  const handleToggle = async () => {
-    const next = !enabled;
-    try {
-      await toggleCommunity(next, displayName);
-      setEnabled(next);
-      setStatus(next ? 'Community enabled' : 'Community disabled');
-      setTimeout(() => setStatus(''), 3000);
-    } catch (e) { setStatus('Error: ' + e.message); }
-  };
-
-  const handleSaveName = async () => {
-    try {
-      await toggleCommunity(enabled, displayName);
-      setStatus('Display name saved');
-      setTimeout(() => setStatus(''), 3000);
-    } catch (e) { setStatus('Error: ' + e.message); }
-  };
-
-  const handleRegisterSite = async () => {
-    try {
-      const result = await registerSite({ name: siteName, url: siteUrl, webhook_url: webhookUrl });
-      setSiteKey(result.site_key);
-      setWebhookSecret(result.webhook_secret);
-      setStatus('Site registered');
-      setTimeout(() => setStatus(''), 3000);
-    } catch (e) { setStatus('Error: ' + e.message); }
-  };
-
-  return (
-    <>
-      <Card title="Ttek2 Community">
-        <p className="text-xs mb-4" style={{ color: 'var(--text-secondary)' }}>
-          Connect to Ttek2 to comment on articles, discuss trending topics, and show your rig badge to the community.
-        </p>
-
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <button onClick={handleToggle}
-              className="relative w-11 h-6 rounded-full transition-colors flex-shrink-0"
-              style={{ backgroundColor: enabled ? 'var(--accent)' : 'var(--border)' }}>
-              <div className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all"
-                style={{ left: enabled ? '22px' : '2px' }} />
-            </button>
-            <div>
-              <span className="text-sm font-medium block" style={{ color: 'var(--text-primary)' }}>
-                {enabled ? 'Connected' : 'Disconnected'}
-              </span>
-              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                {enabled ? 'Your rig badge and comments are visible on ttek2.com' : 'Toggle on to join the community'}
-              </span>
-            </div>
-          </div>
-
-          <div className="p-3 rounded-lg text-[10px] leading-relaxed" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>
-            <strong style={{ color: 'var(--text-primary)' }}>Privacy:</strong> When enabled, only your display name, rig badge (e.g. "RTX 4090"), and comments you post are shared with the ttek2.com community.
-            No other data leaves your RigBoard instance. Ttek2 stores zero user data -- all accounts and content are managed by your RigBoard server.
-            You can disconnect at any time by toggling this off.
-          </div>
-
-          <div>
-            <label className="text-xs block mb-1" style={{ color: 'var(--text-secondary)' }}>Display Name</label>
-            <div className="flex gap-2">
-              <input value={displayName} onChange={e => setDisplayName(e.target.value)}
-                placeholder="Your community display name"
-                className="flex-1 px-3 py-2 rounded-lg border text-sm"
-                style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
-              <button onClick={handleSaveName}
-                className="px-3 py-2 rounded-lg text-sm font-medium text-white"
-                style={{ backgroundColor: 'var(--accent)' }}>
-                Save
-              </button>
-            </div>
-          </div>
-
-          {status && <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{status}</p>}
-
-          {siteKey && (
-            <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-primary)' }}>
-              <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>Connected Site Key</p>
-              <code className="text-xs font-mono" style={{ color: 'var(--accent)' }}>{siteKey}</code>
-            </div>
-          )}
-        </div>
-      </Card>
-
-      <Card>
-        <button onClick={() => setShowAdmin(!showAdmin)}
-          className="text-sm font-medium flex items-center gap-1"
-          style={{ color: 'var(--text-secondary)' }}>
-          {showAdmin ? 'Hide' : 'Show'} Site Administration
-        </button>
-
-        {showAdmin && (
-          <div className="mt-4 space-y-4">
-            <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              Register a new site to enable community features. This generates a site key and webhook secret.
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <input value={siteName} onChange={e => setSiteName(e.target.value)} placeholder="Site name (e.g. ttek2)"
-                className="px-3 py-2 rounded-lg border text-sm"
-                style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
-              <input value={siteUrl} onChange={e => setSiteUrl(e.target.value)} placeholder="Site URL (https://ttek2.com)"
-                className="px-3 py-2 rounded-lg border text-sm"
-                style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
-              <input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="Webhook URL (optional)"
-                className="col-span-2 px-3 py-2 rounded-lg border text-sm"
-                style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }} />
-            </div>
-            <button onClick={handleRegisterSite}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white"
-              style={{ backgroundColor: 'var(--accent)' }}>
-              Register Site
-            </button>
-
-            {webhookSecret && (
-              <div className="p-3 rounded-lg space-y-2" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Site Key (give to site admin)</p>
-                  <code className="text-xs font-mono block mt-0.5" style={{ color: 'var(--accent)' }}>{siteKey}</code>
-                </div>
-                <div>
-                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Webhook Secret (keep secure)</p>
-                  <code className="text-xs font-mono block mt-0.5 break-all" style={{ color: '#f59e0b' }}>{webhookSecret}</code>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </Card>
-    </>
-  );
-}
+function CommunitySettings() { return null; }
 
 function SecurityHealth() {
   const [status, setStatus] = useState(null);

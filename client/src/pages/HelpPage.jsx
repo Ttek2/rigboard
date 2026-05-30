@@ -265,20 +265,6 @@ Useful for Grafana dashboards, internal tools, documentation pages, or any web c
 **Configuration:** Click the gear icon to set your OpenAI-compatible endpoint URL and model name. Works with OpenAI, Ollama, LM Studio, Groq, and any compatible API. Set autonomy level in Settings > API.`
       },
       {
-        id: 'widget-community',
-        title: 'Community',
-        content: `Browse and participate in ttek2 community discussions.
-
-**Features:**
-- View articles and trending topic discussions
-- Comment with threaded replies
-- Vote and report comments
-- "Owns This Hardware" verified badges on comments (matched from your rigs)
-- Rig badges showing your hardware
-
-**Configuration:** Enable community in Settings > Community. Toggle connects your RigBoard instance to ttek2.com — no OAuth or account creation needed.`
-      },
-      {
         id: 'widget-youtube',
         title: 'YouTube',
         content: `Track uploads from your favourite YouTube creators.
@@ -440,53 +426,6 @@ Click any topic to expand and see price details, source links, and historical ve
     ]
   },
   {
-    id: 'community',
-    title: 'Community',
-    icon: Users,
-    items: [
-      {
-        id: 'community-connect',
-        title: 'Connecting to ttek2',
-        content: `RigBoard integrates with the ttek2 community platform — no OAuth, no account creation, no popups.
-
-**To connect:**
-1. Go to Settings > Community
-2. Toggle "Enable Community" on
-3. Optionally set your display name and avatar color
-
-That's it. Your RigBoard instance gets a community token that identifies you in discussions. Toggle off at any time to disconnect and revoke your token.`
-      },
-      {
-        id: 'community-comments',
-        title: 'Comments & Discussions',
-        content: `Once connected, you can:
-- **Browse articles** and trending topic discussions from the Community widget
-- **Comment** on articles and topics with threaded replies
-- **Vote** on comments (upvote/downvote)
-- **Report** inappropriate content
-
-Comments support markdown formatting. Your display name and rig badge appear with each comment.`
-      },
-      {
-        id: 'community-badges',
-        title: 'Rig Badges',
-        content: `Your hardware shows up in the community:
-
-- **Rig badge** — a short summary of your main components (e.g., "RTX 4090 / i9-14900K / 64GB") appears on your profile
-- **"Owns This Hardware"** verified badge — when you comment on a topic about hardware you own, a verified badge appears
-
-These badges are derived from your Hardware page data and update automatically.`
-      },
-      {
-        id: 'community-webhooks',
-        title: 'Outbound Webhooks',
-        content: `RigBoard can send HMAC-signed webhooks for community events.
-
-Configure webhook URLs in Settings > Community to receive notifications when events happen in the community. Webhooks include an HMAC signature for verification.`
-      },
-    ]
-  },
-  {
     id: 'ai',
     title: 'AI Assistant',
     icon: Bot,
@@ -518,7 +457,6 @@ Configure webhook URLs in Settings > Community to receive notifications when eve
 - **Docker** — running containers and their status
 - **System** — CPU, RAM, disk, network stats
 - **Trending** — Community Pulse topics
-- **Community** — your community profile and discussions
 - **Dashboard** — current theme, layout, and settings
 - **Notifications** — pending alerts
 
@@ -736,7 +674,7 @@ services:
     restart: unless-stopped
 \`\`\`
 
-This runs feeds, notes, bookmarks, rigs, AI, community, and all integrations. No host access.
+This runs feeds, notes, bookmarks, rigs, AI, and all integrations. No host access.
 
 **Full (host monitoring + Docker control):**
 \`\`\`yaml
@@ -829,7 +767,7 @@ export const WIDGET_HELP_MAP = {
   services: 'widget-services', weather: 'widget-weather', calendar: 'widget-calendar',
   docker: 'widget-docker', system: 'widget-system', network: 'widget-network',
   embed: 'widget-embed', websearch: 'widget-websearch', ai: 'widget-ai',
-  community: 'widget-community', jellyseerr: 'widget-jellyseerr', starr: 'widget-starr',
+  jellyseerr: 'widget-jellyseerr', starr: 'widget-starr',
   media: 'widget-media', pihole: 'widget-pihole', downloads: 'widget-downloads',
   homeassistant: 'widget-homeassistant', releases: 'widget-releases',
   youtube: 'widget-youtube', stickynote: 'widget-stickynote', clock: 'widget-clock',

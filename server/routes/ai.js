@@ -105,26 +105,6 @@ function buildContext(db) {
     parts.push('  No feed items yet.');
   }
 
-  // Community
-  const communityEnabled = db.prepare("SELECT value FROM settings WHERE key = 'community_opted_in'").get()?.value === 'true';
-  const communityName = db.prepare("SELECT value FROM settings WHERE key = 'community_display_name'").get()?.value;
-  const commentCount = (() => { try { return db.prepare('SELECT COUNT(*) as c FROM community_comments').get().c; } catch { return 0; } })();
-  const recentComments = (() => { try { return db.prepare("SELECT content, slug, page_type, created_at FROM community_comments ORDER BY created_at DESC LIMIT 5").all(); } catch { return []; } })();
-
-  parts.push(`Ttek2 Community (${communityEnabled ? 'connected' : 'not connected'}):`);
-  if (communityEnabled) {
-    parts.push(`  Display name: ${communityName || 'not set'}`);
-    parts.push(`  Total comments: ${commentCount}`);
-    if (recentComments.length > 0) {
-      parts.push('  Recent community activity:');
-      for (const c of recentComments) {
-        parts.push(`    [${c.page_type}/${c.slug}] ${c.content.slice(0, 80)}`);
-      }
-    }
-  } else {
-    parts.push('  User has not connected to ttek2 community yet.');
-  }
-
   // Docker containers
   try {
     const { execSync } = require('child_process');

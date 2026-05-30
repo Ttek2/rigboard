@@ -39,7 +39,10 @@ db.exec(schema);
 
 // Migrations
 try { db.exec('ALTER TABLE widget_layout ADD COLUMN tab_id INTEGER REFERENCES dashboard_tabs(id) ON DELETE CASCADE'); } catch (e) {}
-try { db.exec('ALTER TABLE community_comments ADD COLUMN topic_context TEXT'); } catch (e) {}
+// Community feature removed — drop its tables (idempotent; safe on fresh installs).
+for (const t of ['community_votes', 'community_reports', 'community_comments', 'oauth_tokens', 'oauth_codes', 'oauth_clients', 'community_users']) {
+  try { db.exec(`DROP TABLE IF EXISTS ${t}`); } catch (e) {}
+}
 // Default the web-search provider to ttek2 for installs that haven't explicitly
 // chosen one (ON CONFLICT DO NOTHING preserves a user's deliberate choice).
 try { db.prepare("INSERT INTO settings (key, value) VALUES ('search_provider', 'ttek2') ON CONFLICT(key) DO NOTHING").run(); } catch (e) {}
@@ -139,16 +142,9 @@ function authMiddleware(req, res, next) {
   if (!authEnabled || authEnabled.value !== 'true') return next();
 
   // Public paths: only specific auth routes, health check, shared rigs, webhooks, metrics
-  // Community read-only routes (GET) are public; mutations require auth via community token
   const url = req.originalUrl || req.path;
   const publicPaths = ['/api/v1/auth/login', '/api/v1/auth/logout', '/api/v1/auth/status', '/api/health', '/api/v1/share/', '/api/v1/webhooks/incoming', '/metrics'];
   if (publicPaths.some(p => url.startsWith(p))) return next();
-
-  // Community/oauth routes: allow GET (read-only) publicly, except sensitive endpoints
-  // /community/token returns a bearer credential — requires dashboard auth
-  const communityPrefixes = ['/api/v1/community', '/api/v1/oauth', '/api/v1/me'];
-  const sensitiveGets = ['/api/v1/community/token', '/api/v1/oauth/token'];
-  if (communityPrefixes.some(p => url.startsWith(p)) && req.method === 'GET' && !sensitiveGets.some(p => url.startsWith(p))) return next();
 
   if (req.session?.authenticated) return next();
   res.status(401).json({ error: 'Authentication required' });
@@ -342,12 +338,6 @@ app.use('/api/v1/telegram', require('./routes/telegram'));
 app.use('/api/v1/ai', require('./routes/ai'));
 app.use('/api/v1/ai/actions', require('./routes/ai-actions'));
 app.use('/api/v1/websearch', require('./routes/websearch'));
-
-// Community (site key model, no OAuth)
-app.use('/api/v1/community', require('./routes/oauth')); // token, toggle, sites
-app.use('/api/v1/community', require('./routes/community')); // comments, discussions, profiles, moderation
-const communityRouter = require('./routes/community');
-app.get('/api/v1/me', (req, res, next) => { req.url = '/me'; communityRouter(req, res, next); });
 
 // Server-Sent Events
 const sseRouter = require('./routes/sse');

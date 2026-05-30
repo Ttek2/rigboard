@@ -19,7 +19,6 @@ import EmbedWidget from '../components/widgets/EmbedWidget';
 import HomeAssistantWidget from '../components/widgets/HomeAssistantWidget';
 import WebSearchWidget from '../components/widgets/WebSearchWidget';
 import AIWidget from '../components/widgets/AIWidget';
-import CommunityWidget from '../components/widgets/CommunityWidget';
 import JellyseerrWidget from '../components/widgets/JellyseerrWidget';
 import MediaWidget from '../components/widgets/MediaWidget';
 import StarrWidget from '../components/widgets/StarrWidget';
@@ -60,7 +59,6 @@ const WIDGET_TYPES = {
   releases: { label: 'GitHub Releases', component: ReleasesWidget },
   websearch: { label: 'Web Search', component: WebSearchWidget },
   ai: { label: 'AI Assistant', component: AIWidget },
-  community: { label: 'Community', component: CommunityWidget },
   youtube: { label: 'YouTube', component: YouTubeWidget },
   stickynote: { label: 'Sticky Note', component: StickyNoteWidget },
   clock: { label: 'Clock / Timezone', component: ClockWidget },
